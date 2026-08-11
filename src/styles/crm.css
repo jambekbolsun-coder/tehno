@@ -54,6 +54,20 @@
 
 .profile-avatar-large img{width:100%;height:100%;object-fit:cover;border-radius:inherit}.form-hint{margin:0;color:var(--crm-muted);font-size:.62rem}
 
+/* Safe responsive bounds and profile security forms */
+.crm-app,.crm-main,.crm-content,.crm-page,.crm-panel,.crm-page-header,.profile-layout,.profile-card,.profile-form,.profile-subform { min-width: 0; max-width: 100%; }
+.crm-page-header > *,.crm-page-header > div:last-child > *,.crm-panel > header > * { min-width: 0; }
+.profile-card dd { min-width: 0; max-width: 68%; overflow-wrap: anywhere; text-align: right; }
+.profile-form { align-content: start; }
+.profile-subform { min-width: 0; display: grid; gap: 15px; }
+.profile-subform > header h3 { margin: 0; }
+.profile-subform > header p { margin: 4px 0 0; color: var(--crm-muted); font-size: .62rem; }
+.profile-password-grid { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.profile-password-input { min-width: 0; position: relative; }
+.profile-password-input input { width: 100%; padding-right: 42px; }
+.profile-password-input button { width: 34px; height: 34px; position: absolute; top: 50%; right: 6px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--crm-muted); transform: translateY(-50%); }
+.profile-password-input button:hover { background: var(--crm-bg); color: var(--crm-text); }
+
 :root[data-theme="dark"] .manager-card__money,:root[data-theme="dark"] .ai-local-badge,:root[data-theme="dark"] .kanban-hint,:root[data-theme="dark"] .finance-note,:root[data-theme="dark"] .settings-alert { filter: brightness(.72); }
 
 .notification-actions { display:flex;align-items:center;gap:9px; }

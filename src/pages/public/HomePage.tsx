@@ -14,6 +14,7 @@ import {
   Tv,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import type { SyntheticEvent } from "react";
 import { FAQBlock } from "@/components/public/FAQBlock";
 import { ProductGrid } from "@/components/public/ProductGrid";
 import { QuickLeadForm } from "@/components/public/QuickLeadForm";
@@ -32,6 +33,38 @@ const categoryIcons = {
   HeartPulse,
 };
 
+const fallbackHeroImages = {
+  main: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=1200&q=88",
+  cleaning: "https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&w=700&q=88",
+  washer: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=700&q=88",
+};
+
+const fallbackHeroNames = {
+  ru: {
+    main: "Современная техника для дома",
+    cleaning: "Умная уборка",
+    washer: "Надёжная техника с гарантией",
+  },
+  kg: {
+    main: "Үй үчүн заманбап техника",
+    cleaning: "Акылдуу тазалоо",
+    washer: "Кепилдик менен ишенимдүү техника",
+  },
+  en: {
+    main: "Modern home appliances",
+    cleaning: "Smart cleaning",
+    washer: "Reliable appliances with warranty",
+  },
+};
+
+function useFallbackImage(
+  event: SyntheticEvent<HTMLImageElement>,
+  fallback: string,
+) {
+  if (event.currentTarget.src === fallback) return;
+  event.currentTarget.src = fallback;
+}
+
 export default function HomePage() {
   const { language, t } = useTranslation();
   const products = useAppStore((state) => state.products).filter(
@@ -48,6 +81,9 @@ export default function HomePage() {
     .slice(0, 9);
   const popular = [...products].sort((a, b) => b.views - a.views).slice(0, 5);
   const heroProducts = products.slice(0, 3);
+  const heroMain = heroProducts[0];
+  const heroBottom = heroProducts[1];
+  const heroCleaning = heroProducts[2];
   return (
     <>
       <section className="hero-section">
@@ -100,26 +136,29 @@ export default function HomePage() {
             <div className="hero-product hero-product--main">
               <span className="hero-product__tag">{t("weekHit")}</span>
               <img
-                src={heroProducts[0]?.images[0].url}
-                alt={heroProducts[0]?.name[language]}
+                src={heroMain?.images[0]?.url || fallbackHeroImages.main}
+                alt={heroMain?.name[language] || fallbackHeroNames[language].main}
                 fetchPriority="high"
+                onError={(event) => useFallbackImage(event, fallbackHeroImages.main)}
               />
               <div>
-                <span>{heroProducts[0]?.brand}</span>
-                <strong>{heroProducts[0]?.name[language]}</strong>
+                <span>{heroMain?.brand || "TEHNO CENTER 2"}</span>
+                <strong>{heroMain?.name[language] || fallbackHeroNames[language].main}</strong>
               </div>
             </div>
             <div className="hero-product hero-product--top">
               <img
-                src={heroProducts[2]?.images[0].url}
-                alt={heroProducts[2]?.name[language]}
+                src={heroCleaning?.images[0]?.url || fallbackHeroImages.cleaning}
+                alt={heroCleaning?.name[language] || fallbackHeroNames[language].cleaning}
+                onError={(event) => useFallbackImage(event, fallbackHeroImages.cleaning)}
               />
               <span>{t("smartCleaning")}</span>
             </div>
             <div className="hero-product hero-product--bottom">
               <img
-                src={heroProducts[1]?.images[0].url}
-                alt={heroProducts[1]?.name[language]}
+                src={heroBottom?.images[0]?.url || fallbackHeroImages.washer}
+                alt={heroBottom?.name[language] || fallbackHeroNames[language].washer}
+                onError={(event) => useFallbackImage(event, fallbackHeroImages.washer)}
               />
               <span>{t("warranty12Short")}</span>
             </div>

@@ -79,6 +79,8 @@
 }
 
 @media (max-width: 720px) {
+  html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }
+  .container, .site-header__inner, .hero-grid, .hero-copy, .hero-visual, .trust-strip, .product-grid, .category-grid, .why-grid, .store-visit, .faq-home-grid, .request-section, .footer-grid, .catalog-layout, .product-detail-grid, .product-lower-grid, .cart-layout, .checkout-layout, .about-hero__grid, .assortment-section, .website-discount, .contacts-grid, .crm-app, .crm-main, .crm-content, .crm-page, .crm-page-header, .profile-layout { min-width: 0; max-width: 100%; }
   .site-header__inner { gap: 8px; }
   .header-actions .language-switcher, .header-actions > .icon-button:not(.burger-button):not(.badge-button) { display: none; }
   .section { padding-block: 58px; }
@@ -133,7 +135,7 @@
   .crm-global-search { display: none; }
   .crm-profile-menu > button > div, .crm-profile-menu > button > svg { display: none; }
   .crm-page-header { min-height: auto; flex-direction: column; gap: 12px; }
-  .crm-page-header > div:last-child { width: 100%; flex-wrap: wrap; }
+  .crm-page-header > div:last-child { width: 100%; min-width: 0; flex-wrap: wrap; }
   .crm-page-header > div:last-child > * { flex: 1; }
   .metrics-grid,.metrics-grid--manager,.metrics-grid.compact { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .manager-cards,.supplier-grid,.customer-card-grid,.product-admin-grid { grid-template-columns: 1fr; }
@@ -155,6 +157,17 @@
   .leads-toolbar,.customers-toolbar,.catalog-toolbar-crm { flex-wrap: wrap; }
   .leads-toolbar .crm-search,.customers-toolbar .crm-search,.catalog-toolbar-crm .crm-search { flex-basis: 100%; }
   .crm-search input { min-width: 0; width: 100%; }
+  .crm-panel > header { min-width: 0; flex-wrap: wrap; }
+  .crm-panel > header > div { min-width: 0; }
+  .modal-layer { padding: 10px; overflow-x: hidden; }
+  .modal { width: 100%; max-width: 100%; max-height: calc(100dvh - 20px); }
+  .modal__header { gap: 10px; padding-inline: 14px; }
+  .modal__body { padding: 15px; }
+  .toast-region { left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .toast { width: 100%; min-width: 0; max-width: 100%; }
+  .profile-card dl div { align-items: flex-start; }
+  .profile-form { padding: 17px; }
+  .profile-password-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
@@ -244,6 +257,16 @@
   .analytics-donuts { gap: 10px; padding: 18px 8px; }.analytics-donuts .donut-chart { width: 105px; height: 105px; }
   .settings-card { padding: 12px; }.settings-card > header { margin: -12px -12px 12px; }
   .installment-settings-table { grid-template-columns: 1fr; }
+  .crm-content { width: 100%; padding-inline: 10px; }
+  .crm-page-header > div:last-child > * { flex: 1 1 100%; width: 100%; }
+  .crm-page-header > div:last-child .button { width: 100%; }
+  .profile-card { padding: 18px 14px; }
+  .profile-form { padding: 14px; }
+  .profile-form > .profile-subform > .button { width: 100%; }
+  .profile-card dl div { gap: 8px; }
+  .profile-card dd { max-width: 64%; }
+  .responsive-table { width: 100%; max-width: 100%; }
+  .leads-toolbar,.customers-toolbar,.catalog-toolbar-crm,.returns-toolbar,.notification-filters { width: 100%; max-width: 100%; }
 }
 
 @media (max-width: 360px) {

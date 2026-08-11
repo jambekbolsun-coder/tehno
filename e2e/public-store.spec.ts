@@ -25,11 +25,29 @@ test("язык и тема сохраняются после перезагру�
 
 test("мобильное меню не создаёт горизонтальный скролл", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
-  await page.goto("/#/");
-  await page.getByRole("button", { name: "Открыть меню" }).click();
-  await expect(page.locator(".mobile-drawer")).toBeVisible();
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow).toBeLessThanOrEqual(1);
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".mobile-drawer-layer")).not.toHaveClass(/is-open/);
+  for (const width of [320, 360, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/#/");
+    await page.getByRole("button", { name: "Открыть меню" }).click();
+    await expect(page.locator(".mobile-drawer-layer")).toHaveClass(/is-open/);
+    await page.waitForTimeout(350);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".mobile-drawer-layer")).not.toHaveClass(/is-open/);
+  }
+});
+
+test("публичные страницы помещаются в экран телефона", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
+  const routes = ["/", "/catalog", "/about", "/contacts", "/faq", "/favorites", "/cart", "/login"];
+  for (const width of [320, 360, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const route of routes) {
+      await page.goto(`/#${route}`);
+      await expect(page.locator("#root")).not.toBeEmpty();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, `${route} at ${width}px`).toBeLessThanOrEqual(1);
+    }
+  }
 });

@@ -317,6 +317,24 @@ class SupabaseGateway {
     if (error) throw new Error(error.message);
   }
 
+  async changePassword(currentPassword: string, newPassword: string) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const email = userData.user?.email;
+    if (userError || !email) throw new Error("Не удалось подтвердить текущую сессию");
+
+    const verification = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+    if (verification.error) throw new Error("Текущий пароль указан неверно");
+
+    const { error } = await supabase.auth.updateUser({
+      current_password: currentPassword,
+      password: newPassword,
+    });
+    if (error) throw new Error(error.message);
+  }
+
   async load(session: SessionUser | null): Promise<SupabaseSnapshot> {
     const base = emptySnapshot();
     const [

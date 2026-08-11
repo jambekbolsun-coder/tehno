@@ -1524,14 +1524,43 @@ export function ProfileSection() {
   const session = useAppStore((state) => state.session)!;
   const updateProfile = useAppStore((state) => state.updateProfile);
   const updateProfileAvatar = useAppStore((state) => state.updateProfileAvatar);
+  const changePassword = useAppStore((state) => state.changePassword);
+  const loading = useAppStore((state) => state.loading);
   const showToast = useAppStore((state) => state.showToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(session.name);
   const [phone, setPhone] = useState(session.phone);
-  const submit = (event: FormEvent) => {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const submitProfile = (event: FormEvent) => {
     event.preventDefault();
-    updateProfile(name, phone);
-    showToast("Профиль обновлён");
+    void updateProfile(name, phone);
+  };
+  const submitPassword = async (event: FormEvent) => {
+    event.preventDefault();
+    if (newPassword.length < 8) {
+      showToast("Новый пароль должен содержать минимум 8 символов", "error");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast("Новый пароль и подтверждение не совпадают", "error");
+      return;
+    }
+    if (currentPassword === newPassword) {
+      showToast("Новый пароль должен отличаться от текущего", "error");
+      return;
+    }
+    try {
+      await changePassword(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch {
+      // Ошибка уже показана в общем уведомлении приложения.
+    }
   };
   const uploadAvatar = (file?: File) => {
     if (!file) return;
@@ -1543,7 +1572,7 @@ export function ProfileSection() {
     <div className="crm-page profile-section">
       <CrmPageHeader
         title="Профиль"
-        text="Личные данные и будущие настройки безопасности."
+        text="Личные данные и настройки безопасности учётной записи."
       />
       <div className="profile-layout">
         <section className="crm-panel profile-card">
@@ -1581,48 +1610,104 @@ export function ProfileSection() {
             </div>
           </dl>
         </section>
-        <form className="crm-panel crm-form profile-form" onSubmit={submit}>
-          <header>
-            <h3>Основная информация</h3>
-            <p>Изменения сохраняются в защищённом профиле Supabase.</p>
-          </header>
-          <div className="field">
-            <label>Имя и фамилия</label>
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label>Телефон</label>
-            <input
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label>Email</label>
-            <input value={session.email} disabled />
-          </div>
-          <Button type="submit">Сохранить профиль</Button>
+        <section className="crm-panel crm-form profile-form">
+          <form className="profile-subform" onSubmit={submitProfile}>
+            <header>
+              <h3>Основная информация</h3>
+              <p>Изменения сохраняются в защищённом профиле Supabase.</p>
+            </header>
+            <div className="field">
+              <label htmlFor="profile-name">Имя и фамилия</label>
+              <input
+                id="profile-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                autoComplete="name"
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="profile-phone">Телефон</label>
+              <input
+                id="profile-phone"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                autoComplete="tel"
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="profile-email">Email</label>
+              <input id="profile-email" value={session.email} disabled />
+            </div>
+            <Button type="submit" disabled={loading}>Сохранить профиль</Button>
+          </form>
           <hr />
-          <header>
-            <h3>Пароль</h3>
-            <p>
-              После подключения Supabase пароль будет меняться через защищённую
-              сессию.
-            </p>
-          </header>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled
-          >
-            Смена пароля недоступна в mock-режиме
-          </Button>
-        </form>
+          <form className="profile-subform profile-password-form" onSubmit={submitPassword}>
+            <header>
+              <h3>Сменить пароль</h3>
+              <p>Введите текущий пароль и задайте новый. Минимум 8 символов.</p>
+            </header>
+            <div className="field">
+              <label htmlFor="current-password">Текущий пароль</label>
+              <div className="profile-password-input">
+                <input
+                  id="current-password"
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword((value) => !value)}
+                  aria-label={showCurrentPassword ? "Скрыть текущий пароль" : "Показать текущий пароль"}
+                >
+                  {showCurrentPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+            </div>
+            <div className="profile-password-grid">
+              <div className="field">
+                <label htmlFor="new-password">Новый пароль</label>
+                <div className="profile-password-input">
+                  <input
+                    id="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    minLength={8}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((value) => !value)}
+                    aria-label={showNewPassword ? "Скрыть новый пароль" : "Показать новый пароль"}
+                  >
+                    {showNewPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="confirm-password">Повторите новый пароль</label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  minLength={8}
+                  autoComplete="new-password"
+                  required
+                />
+              </div>
+            </div>
+            <Button type="submit" variant="ghost" disabled={loading}>
+              {loading ? "Сохраняем…" : "Изменить пароль"}
+            </Button>
+          </form>
+        </section>
       </div>
     </div>
   );

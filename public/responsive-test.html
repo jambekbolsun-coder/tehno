@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Responsive route QA</title>
+    <style>
+      body { margin: 0; padding: 10px; background: #ddd; }
+      iframe { display: block; height: 880px; border: 0; background: #fff; }
+    </style>
+  </head>
+  <body>
+    <iframe id="test-frame" title="Responsive route"></iframe>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const frame = document.querySelector("#test-frame");
+      frame.width = params.get("width") || "320";
+      frame.src = `/#/${params.get("route") || ""}`;
+    </script>
+  </body>
+</html>

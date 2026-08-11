@@ -99,6 +99,7 @@ interface AppState extends SupabaseSnapshot {
   addAILog: (log: AIImportLog) => Promise<void>;
   updateProfile: (name: string, phone: string) => Promise<void>;
   updateProfileAvatar: (file: File) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   createSale: (input: StaffSaleInput) => Promise<{ number: string }>;
   showToast: (message: string, kind?: ToastKind) => void;
   clearToast: () => void;
@@ -325,6 +326,19 @@ export const useAppStore = create<AppState>((set, get) => {
         await supabaseGateway.updateProfile(session.name, session.phone, avatar);
         set({ session: { ...session, avatar } });
       }, "Фотография профиля обновлена");
+    },
+    changePassword: async (currentPassword, newPassword) => {
+      set({ loading: true });
+      try {
+        await supabaseGateway.changePassword(currentPassword, newPassword);
+        toast("Пароль успешно изменён");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Не удалось изменить пароль";
+        toast(message, "error");
+        throw error;
+      } finally {
+        set({ loading: false });
+      }
     },
     createSale: async (input) => {
       set({ loading: true });
