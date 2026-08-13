@@ -91,6 +91,7 @@ export function AISection({ role }: { role: "admin" | "manager" }) {
   );
   const managers = useAppStore((state) => state.managers);
   const createSale = useAppStore((state) => state.createSale);
+  const settings = useAppStore((state) => state.settings);
   const addAILog = useAppStore((state) => state.addAILog);
   const showToast = useAppStore((state) => state.showToast);
   const aiLogs = useAppStore((state) => state.aiLogs);
@@ -116,6 +117,9 @@ export function AISection({ role }: { role: "admin" | "manager" }) {
           paymentMethod: parsed.paymentType?.toLowerCase().includes("расср")
             ? "installment"
             : "cash",
+          installmentMonths: parsed.paymentType?.toLowerCase().includes("расср")
+            ? settings.installmentPlans.find((plan) => plan.enabled)?.months
+            : undefined,
         });
       const now = nowIso();
       addAILog({

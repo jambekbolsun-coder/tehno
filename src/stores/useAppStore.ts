@@ -18,6 +18,7 @@ import type {
   ReturnRecord,
   SessionUser,
   Supplier,
+  SupplierDeliveryLineInput,
   Theme,
 } from "@/types/domain";
 import { createId } from "@/utils/id";
@@ -46,6 +47,7 @@ interface StaffSaleInput {
   region: string;
   source: "online" | "offline";
   paymentMethod: "cash" | "card" | "transfer" | "installment";
+  installmentMonths?: number;
 }
 
 interface AppState extends SupabaseSnapshot {
@@ -75,13 +77,21 @@ interface AppState extends SupabaseSnapshot {
   createLead: (input: CreateLeadInput) => Promise<Lead>;
   reassignLead: (leadId: string, managerId: string) => Promise<void>;
   changeLeadStatus: (leadId: string, status: Lead["status"], comment?: string) => Promise<void>;
-  saveProduct: (product: Product) => Promise<void>;
+  saveProduct: (product: Product, deliveryItemId?: string) => Promise<void>;
   archiveProduct: (productId: string) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
   adjustStock: (productId: string, delta: number, reason: string) => Promise<void>;
   addManager: (input: ManagerActivationInput) => Promise<void>;
   deleteManager: (managerId: string) => Promise<void>;
-  addSupplier: (input: Pick<Supplier, "name" | "contactPerson" | "phone" | "address" | "notes">) => Promise<void>;
+  addSupplier: (
+    input: Pick<Supplier, "name" | "contactPerson" | "phone" | "address" | "notes">,
+    items: SupplierDeliveryLineInput[],
+  ) => Promise<void>;
+  addSupplierDelivery: (
+    supplierId: string,
+    items: SupplierDeliveryLineInput[],
+    notes: string,
+  ) => Promise<void>;
   deleteSupplier: (supplierId: string) => Promise<void>;
   toggleManagerDistribution: (managerId: string) => Promise<void>;
   payoutManager: (managerId: string, amount: number, comment: string) => Promise<void>;
@@ -111,7 +121,7 @@ let stopRealtime: (() => void) | undefined;
 const settings = defaultSettings();
 const emptyData: SupabaseSnapshot = {
   products: [], categories: [], brands: [], leads: [], orders: [], managers: [],
-  customers: [], suppliers: [], supplierDebts: [], supplierPayments: [],
+  customers: [], suppliers: [], supplierDeliveries: [], supplierDebts: [], supplierPayments: [],
   managerCommissions: [], managerPayouts: [], expenses: [], returns: [],
   movements: [], notifications: [], faqs: [], analytics: [], aiLogs: [],
   auditLogs: [], settings,
@@ -126,7 +136,11 @@ export const useAppStore = create<AppState>((set, get) => {
     set({ ...data, backendError: undefined });
   };
 
-  const mutate = async (action: () => Promise<unknown>, success?: string) => {
+  const mutate = async (
+    action: () => Promise<unknown>,
+    success?: string,
+    rethrow = false,
+  ) => {
     set({ loading: true });
     try {
       await action();
@@ -134,6 +148,7 @@ export const useAppStore = create<AppState>((set, get) => {
       if (success) toast(success);
     } catch (error) {
       toast(error instanceof Error ? error.message : "Не удалось выполнить операцию", "error");
+      if (rethrow) throw error;
     } finally {
       set({ loading: false });
     }
@@ -273,9 +288,13 @@ export const useAppStore = create<AppState>((set, get) => {
     },
     reassignLead: (leadId, managerId) => mutate(() => supabaseGateway.reassignLead(leadId, managerId), "Заявка переназначена"),
     changeLeadStatus: (leadId, status, comment) => mutate(() => supabaseGateway.changeLeadStatus(leadId, status, comment)),
-    saveProduct: async (product) => {
+    saveProduct: async (product, deliveryItemId) => {
       if (product.images.length > 5) return toast("Можно добавить максимум пять фотографий", "error");
-      await mutate(() => supabaseGateway.saveProduct(product), "Товар сохранён");
+      await mutate(
+        () => supabaseGateway.saveProduct(product, deliveryItemId),
+        "Товар сохранён",
+        true,
+      );
     },
     archiveProduct: (productId) => {
       const product = get().products.find((item) => item.id === productId);
@@ -288,7 +307,16 @@ export const useAppStore = create<AppState>((set, get) => {
       "Приглашение отправлено на email",
     ),
     deleteManager: (managerId) => mutate(() => supabaseGateway.archiveManager(managerId), "Менеджер отключён"),
-    addSupplier: (input) => mutate(() => supabaseGateway.addSupplier(input), "Поставщик добавлен"),
+    addSupplier: (input, items) => mutate(
+      () => supabaseGateway.addSupplier(input, items),
+      "Поставщик и первая поставка добавлены",
+      true,
+    ),
+    addSupplierDelivery: (supplierId, items, notes) => mutate(
+      () => supabaseGateway.addSupplierDelivery(supplierId, items, notes),
+      "Поставка добавлена",
+      true,
+    ),
     deleteSupplier: (supplierId) => mutate(() => supabaseGateway.archiveSupplier(supplierId), "Поставщик архивирован"),
     toggleManagerDistribution: (managerId) => {
       const manager = get().managers.find((item) => item.id === managerId);

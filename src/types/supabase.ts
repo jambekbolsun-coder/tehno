@@ -371,6 +371,7 @@ export type Database = {
           city: string | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           email: string | null
           full_name: string
           id: string
@@ -392,6 +393,7 @@ export type Database = {
           city?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           email?: string | null
           full_name: string
           id?: string
@@ -413,6 +415,7 @@ export type Database = {
           city?: string | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           email?: string | null
           full_name?: string
           id?: string
@@ -1512,6 +1515,7 @@ export type Database = {
           category_id: string
           created_at: string
           created_by: string | null
+          deleted_at: string | null
           description_en: string | null
           description_kg: string | null
           description_ru: string | null
@@ -1548,6 +1552,7 @@ export type Database = {
           category_id: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description_en?: string | null
           description_kg?: string | null
           description_ru?: string | null
@@ -1584,6 +1589,7 @@ export type Database = {
           category_id?: string
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
           description_en?: string | null
           description_kg?: string | null
           description_ru?: string | null
@@ -2011,9 +2017,121 @@ export type Database = {
           },
         ]
       }
+      supplier_deliveries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delivered_at: string
+          delivery_number: number
+          id: string
+          notes: string | null
+          status: string
+          supplier_id: string
+          total_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string
+          delivery_number?: number
+          id?: string
+          notes?: string | null
+          status?: string
+          supplier_id: string
+          total_quantity: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string
+          delivery_number?: number
+          id?: string
+          notes?: string | null
+          status?: string
+          supplier_id?: string
+          total_quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_deliveries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_deliveries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_delivery_items: {
+        Row: {
+          brand: string
+          created_at: string
+          delivery_id: string
+          id: string
+          model: string
+          product_id: string | null
+          product_name: string
+          purchase_price_tyiyn: number
+          quantity: number
+          supplier_sku: string | null
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          delivery_id: string
+          id?: string
+          model: string
+          product_id?: string | null
+          product_name: string
+          purchase_price_tyiyn: number
+          quantity: number
+          supplier_sku?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          delivery_id?: string
+          id?: string
+          model?: string
+          product_id?: string | null
+          product_name?: string
+          purchase_price_tyiyn?: number
+          quantity?: number
+          supplier_sku?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_delivery_items_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_delivery_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_products: {
         Row: {
           created_at: string
+          delivery_item_id: string | null
           id: string
           is_active: boolean
           is_primary: boolean
@@ -2026,6 +2144,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivery_item_id?: string | null
           id?: string
           is_active?: boolean
           is_primary?: boolean
@@ -2038,6 +2157,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivery_item_id?: string | null
           id?: string
           is_active?: boolean
           is_primary?: boolean
@@ -2049,6 +2169,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_products_delivery_item_id_fkey"
+            columns: ["delivery_item_id"]
+            isOneToOne: true
+            referencedRelation: "supplier_delivery_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "supplier_products_product_id_fkey"
             columns: ["product_id"]
@@ -2216,8 +2343,47 @@ export type Database = {
         }
         Returns: Json
       }
+      calculate_installment_terms: {
+        Args: { p_amount_tyiyn: number; p_months: number }
+        Returns: Json
+      }
+      create_product_from_delivery_item: {
+        Args: { p_delivery_item_id: string; p_product: Json }
+        Returns: Json
+      }
       create_public_order: {
         Args: { p_fingerprint: string; p_payload: Json }
+        Returns: Json
+      }
+      create_public_order_v2: {
+        Args: { p_fingerprint: string; p_payload: Json }
+        Returns: Json
+      }
+      create_staff_order_with_payment: {
+        Args: {
+          p_assigned_manager_id?: string
+          p_comment?: string
+          p_customer: Json
+          p_delivery?: Json
+          p_installment_months?: number
+          p_items: Json
+          p_purchase_method?: string
+          p_sale_channel?: string
+          p_source?: string
+        }
+        Returns: Json
+      }
+      create_supplier_delivery: {
+        Args: {
+          p_delivered_at?: string
+          p_items: Json
+          p_notes?: string
+          p_supplier_id: string
+        }
+        Returns: Json
+      }
+      create_supplier_with_delivery: {
+        Args: { p_items: Json; p_notes?: string; p_supplier: Json }
         Returns: Json
       }
       create_staff_order: {
@@ -2243,6 +2409,10 @@ export type Database = {
       }
       is_active_staff: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      delete_product_safely: {
+        Args: { p_product_id: string }
+        Returns: undefined
+      }
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: undefined

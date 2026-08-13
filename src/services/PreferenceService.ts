@@ -29,14 +29,3 @@ export const preferenceService = {
   getTheme: () => read<Theme>(keys.theme, "light"),
   setTheme: (theme: Theme) => browserStorage.setItem(keys.theme, JSON.stringify(theme)),
 };
-
-
-
-
-
-
-
-
-
-
-

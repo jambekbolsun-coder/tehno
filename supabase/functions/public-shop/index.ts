@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
       if (!payload || typeof payload !== "object") return json({ error: "Некорректные данные заявки" }, 400);
       if (typeof payload.full_name !== "string" || typeof payload.phone !== "string" || !Array.isArray(payload.items) || !payload.items.length)
         return json({ error: "Заполните обязательные поля" }, 400);
-      const { data, error } = await admin.rpc("create_public_order", {
+      const { data, error } = await admin.rpc("create_public_order_v2", {
         p_payload: payload,
         p_fingerprint: fp,
       });

@@ -141,6 +141,37 @@ export interface SupplierProduct extends Entity {
   purchasePrice: Money;
 }
 
+export interface SupplierDeliveryItem extends Entity {
+  deliveryId: ID;
+  supplierId: ID;
+  productId?: ID;
+  productName: string;
+  brand: string;
+  model: string;
+  supplierSku?: string;
+  quantity: number;
+  purchasePrice: Money;
+}
+
+export interface SupplierDelivery extends Entity {
+  number: string;
+  supplierId: ID;
+  deliveredAt: string;
+  totalQuantity: number;
+  notes: string;
+  status: "received" | "cancelled";
+  items: SupplierDeliveryItem[];
+}
+
+export interface SupplierDeliveryLineInput {
+  productName: string;
+  brand: string;
+  model: string;
+  supplierSku?: string;
+  quantity: number;
+  purchasePrice: Money;
+}
+
 export type InventoryMovementType =
   | "receipt"
   | "sale"

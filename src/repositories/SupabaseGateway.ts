@@ -27,6 +27,8 @@ import type {
   ReturnRecord,
   SessionUser,
   Supplier,
+  SupplierDelivery,
+  SupplierDeliveryLineInput,
   SupplierDebt,
   SupplierPayment,
 } from "@/types/domain";
@@ -39,6 +41,8 @@ type ProfileRow = Tables<"profiles">;
 type ProductRow = Tables<"products">;
 type ProductImageRow = Tables<"product_images">;
 type SupplierProductRow = Tables<"supplier_products">;
+type SupplierDeliveryRow = Tables<"supplier_deliveries">;
+type SupplierDeliveryItemRow = Tables<"supplier_delivery_items">;
 type PromotionRow = Tables<"promotions">;
 type PromotionProductRow = Tables<"promotion_products">;
 type OrderRow = Tables<"orders"> & {
@@ -105,6 +109,7 @@ export interface SupabaseSnapshot {
   managers: ManagerProfile[];
   customers: Customer[];
   suppliers: Supplier[];
+  supplierDeliveries: SupplierDelivery[];
   supplierDebts: SupplierDebt[];
   supplierPayments: SupplierPayment[];
   managerCommissions: ManagerCommission[];
@@ -148,6 +153,7 @@ const emptySnapshot = (): SupabaseSnapshot => ({
   managers: [],
   customers: [],
   suppliers: [],
+  supplierDeliveries: [],
   supplierDebts: [],
   supplierPayments: [],
   managerCommissions: [],
@@ -363,7 +369,7 @@ class SupabaseGateway {
     ] = await Promise.all([
       supabase.from("categories").select("*").order("sort_order"),
       supabase.from("brands").select("*").order("sort_order"),
-      supabase.from("products").select("*").order("sort_order"),
+      supabase.from("products").select("*").is("deleted_at", null).order("sort_order"),
       supabase.from("product_images").select("*").order("sort_order"),
       supabase.from("promotions").select("*").order("starts_at", { ascending: false }),
       supabase.from("promotion_products").select("*"),
@@ -390,6 +396,8 @@ class SupabaseGateway {
       statusHistory: Tables<"order_status_history">[];
       itemFinancials: Tables<"order_item_financials">[];
       suppliers: Tables<"suppliers">[];
+      supplierDeliveries: SupplierDeliveryRow[];
+      supplierDeliveryItems: SupplierDeliveryItemRow[];
       debts: Tables<"supplier_debts">[];
       supplierPayments: Tables<"supplier_payments">[];
       commissions: Tables<"manager_commissions">[];
@@ -414,6 +422,8 @@ class SupabaseGateway {
         supabase.from("order_status_history").select("*").order("created_at"),
         supabase.from("order_item_financials").select("*"),
         supabase.from("suppliers").select("*").order("name"),
+        supabase.from("supplier_deliveries").select("*").order("delivered_at", { ascending: false }),
+        supabase.from("supplier_delivery_items").select("*").order("created_at"),
         supabase.from("supplier_products").select("*"),
         supabase.from("supplier_debts").select("*"),
         supabase.from("supplier_payments").select("*"),
@@ -431,7 +441,7 @@ class SupabaseGateway {
         if (result.error) throw new Error(`CRM ${index + 1}: ${result.error.message}`);
         return result.data as unknown[];
       });
-      supplierProducts = values[9] as SupplierProductRow[];
+      supplierProducts = values[11] as SupplierProductRow[];
       staffData = {
         profiles: values[0] as ProfileRow[],
         managerProfiles: values[1] as Tables<"manager_profiles">[],
@@ -442,17 +452,19 @@ class SupabaseGateway {
         statusHistory: values[6] as Tables<"order_status_history">[],
         itemFinancials: values[7] as Tables<"order_item_financials">[],
         suppliers: values[8] as Tables<"suppliers">[],
-        debts: values[10] as Tables<"supplier_debts">[],
-        supplierPayments: values[11] as Tables<"supplier_payments">[],
-        commissions: values[12] as Tables<"manager_commissions">[],
-        managerPayouts: values[13] as Tables<"manager_payouts">[],
-        expenses: values[14] as Tables<"expenses">[],
-        returns: values[15] as Tables<"returns">[],
-        movements: values[16] as Tables<"inventory_movements">[],
-        notifications: values[17] as Tables<"notifications">[],
-        analytics: values[18] as Tables<"analytics_events">[],
-        aiLogs: values[19] as Tables<"ai_import_logs">[],
-        auditLogs: values[20] as Tables<"audit_logs">[],
+        supplierDeliveries: values[9] as SupplierDeliveryRow[],
+        supplierDeliveryItems: values[10] as SupplierDeliveryItemRow[],
+        debts: values[12] as Tables<"supplier_debts">[],
+        supplierPayments: values[13] as Tables<"supplier_payments">[],
+        commissions: values[14] as Tables<"manager_commissions">[],
+        managerPayouts: values[15] as Tables<"manager_payouts">[],
+        expenses: values[16] as Tables<"expenses">[],
+        returns: values[17] as Tables<"returns">[],
+        movements: values[18] as Tables<"inventory_movements">[],
+        notifications: values[19] as Tables<"notifications">[],
+        analytics: values[20] as Tables<"analytics_events">[],
+        aiLogs: values[21] as Tables<"ai_import_logs">[],
+        auditLogs: values[22] as Tables<"audit_logs">[],
       };
     }
 
@@ -595,6 +607,7 @@ class SupabaseGateway {
         total: item.line_total_tyiyn,
       }));
       const months = row.requested_installment_months || undefined;
+      const requestMetadata = asObject(row.request_metadata);
       return {
         id: row.id,
         number: `ORD-${row.order_number}`,
@@ -609,10 +622,13 @@ class SupabaseGateway {
         purchaseMethod: row.requested_purchase_method === "installment" ? "installment" : "full",
         installment: months ? {
           months,
-          rateBasisPoints: 0,
-          overpayment: 0,
+          rateBasisPoints: number(requestMetadata.installment_rate_basis_points),
+          overpayment: number(requestMetadata.installment_overpayment_tyiyn),
           total: row.total_tyiyn,
-          monthlyPayment: Math.ceil(row.total_tyiyn / months),
+          monthlyPayment: number(
+            requestMetadata.installment_monthly_payment_tyiyn,
+            Math.ceil(row.total_tyiyn / months),
+          ),
         } : undefined,
         source: row.sale_channel === "offline" ? "offline" : "online",
         status: mapLeadStatus(row.status),
@@ -676,6 +692,33 @@ class SupabaseGateway {
       paid: staffData.supplierPayments
         .filter((payment) => payment.supplier_id === row.id)
         .reduce((sum, payment) => sum + payment.amount_tyiyn, 0),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+    base.supplierDeliveries = staffData.supplierDeliveries.map((row) => ({
+      id: row.id,
+      number: `SUP-${row.delivery_number}`,
+      supplierId: row.supplier_id,
+      deliveredAt: row.delivered_at,
+      totalQuantity: row.total_quantity,
+      notes: row.notes || "",
+      status: row.status === "cancelled" ? "cancelled" : "received",
+      items: staffData.supplierDeliveryItems
+        .filter((item) => item.delivery_id === row.id)
+        .map((item) => ({
+          id: item.id,
+          deliveryId: item.delivery_id,
+          supplierId: row.supplier_id,
+          productId: item.product_id || undefined,
+          productName: item.product_name,
+          brand: item.brand,
+          model: item.model,
+          supplierSku: item.supplier_sku || undefined,
+          quantity: item.quantity,
+          purchasePrice: item.purchase_price_tyiyn,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+        })),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));
@@ -902,10 +945,10 @@ class SupabaseGateway {
     });
   }
 
-  async saveProduct(product: Product): Promise<void> {
+  async saveProduct(product: Product, deliveryItemId?: string): Promise<void> {
     let brandId: string | null = null;
     const brandName = product.brand.trim();
-    if (brandName) {
+    if (brandName && !deliveryItemId) {
       const existing = await supabase.from("brands").select("id").ilike("name", brandName).limit(1).maybeSingle();
       if (existing.error) throw new Error(existing.error.message);
       if (existing.data) brandId = existing.data.id;
@@ -946,12 +989,42 @@ class SupabaseGateway {
       is_active: product.isVisible && !product.isArchived,
       status: product.isArchived ? "archived" : product.isVisible ? (product.stock > 0 ? "available" : "out_of_stock") : "hidden",
     };
-    const saved = validUuid
-      ? await supabase.from("products").upsert(payload, { onConflict: "id" }).select("id").single()
-      : await supabase.from("products").insert(payload).select("id").single();
-    const productId = unwrap(saved, "Товар").id;
+    let productId: string;
+    if (deliveryItemId) {
+      const created = await supabase.rpc("create_product_from_delivery_item", {
+        p_delivery_item_id: deliveryItemId,
+        p_product: {
+          sku: product.sku,
+          slug: product.slug,
+          category_id: product.categoryId,
+          name_ru: product.name.ru,
+          name_kg: product.name.kg,
+          name_en: product.name.en,
+          description_ru: product.description.ru,
+          description_kg: product.description.kg,
+          description_en: product.description.en,
+          specifications: product.specifications,
+          sale_price_tyiyn: product.salePrice,
+          old_price_tyiyn: product.oldPrice ?? "",
+          minimum_stock: product.minimumStock,
+          warranty_months: product.warrantyMonths,
+          manager_commission_type: product.managerRewardType,
+          manager_commission_value: product.managerRewardValue,
+          installment_allowed: product.installmentEligible,
+          is_featured: product.isFeatured,
+          is_active: product.isVisible,
+        } as unknown as Json,
+      });
+      if (created.error) throw new Error(created.error.message);
+      productId = String((created.data as { product_id: string }).product_id);
+    } else {
+      const saved = validUuid
+        ? await supabase.from("products").upsert(payload, { onConflict: "id" }).select("id").single()
+        : await supabase.from("products").insert(payload).select("id").single();
+      productId = unwrap(saved, "Товар").id;
+    }
 
-    if (product.supplierId) {
+    if (product.supplierId && !deliveryItemId) {
       const relation = await supabase.from("supplier_products").upsert({
         supplier_id: product.supplierId,
         product_id: productId,
@@ -1004,8 +1077,10 @@ class SupabaseGateway {
   }
 
   async deleteProduct(productId: string) {
-    const result = await supabase.from("products").delete().eq("id", productId);
-    if (result.error) throw new Error(result.error.message);
+    const { error } = await supabase.rpc("delete_product_safely", {
+      p_product_id: productId,
+    });
+    if (error) throw new Error(error.message);
   }
 
   async adjustStock(productId: string, delta: number, reason: string) {
@@ -1054,15 +1129,50 @@ class SupabaseGateway {
     if (result.error) throw new Error(result.error.message);
   }
 
-  async addSupplier(input: Pick<Supplier, "name" | "contactPerson" | "phone" | "address" | "notes">) {
-    const result = await supabase.from("suppliers").insert({
-      name: input.name,
-      contact_person: input.contactPerson,
-      phone: input.phone,
-      address: input.address,
-      notes: input.notes,
+  async addSupplier(
+    input: Pick<Supplier, "name" | "contactPerson" | "phone" | "address" | "notes">,
+    items: SupplierDeliveryLineInput[],
+  ) {
+    const { error } = await supabase.rpc("create_supplier_with_delivery", {
+      p_supplier: {
+        name: input.name,
+        contact_person: input.contactPerson,
+        phone: input.phone,
+        whatsapp: input.phone,
+        address: input.address,
+        notes: input.notes,
+      },
+      p_items: items.map((item) => ({
+        product_name: item.productName,
+        brand: item.brand,
+        model: item.model,
+        supplier_sku: item.supplierSku,
+        quantity: item.quantity,
+        purchase_price_tyiyn: item.purchasePrice,
+      })),
+      p_notes: "Первая поставка",
     });
-    if (result.error) throw new Error(result.error.message);
+    if (error) throw new Error(error.message);
+  }
+
+  async addSupplierDelivery(
+    supplierId: string,
+    items: SupplierDeliveryLineInput[],
+    notes: string,
+  ) {
+    const { error } = await supabase.rpc("create_supplier_delivery", {
+      p_supplier_id: supplierId,
+      p_items: items.map((item) => ({
+        product_name: item.productName,
+        brand: item.brand,
+        model: item.model,
+        supplier_sku: item.supplierSku,
+        quantity: item.quantity,
+        purchase_price_tyiyn: item.purchasePrice,
+      })),
+      p_notes: notes || undefined,
+    });
+    if (error) throw new Error(error.message);
   }
 
   async archiveSupplier(supplierId: string) {
@@ -1275,14 +1385,17 @@ class SupabaseGateway {
     region: string;
     source: "online" | "offline";
     paymentMethod: "cash" | "card" | "transfer" | "installment";
+    installmentMonths?: number;
   }): Promise<{ number: string }> {
-    const created = await supabase.rpc("create_staff_order", {
+    const created = await supabase.rpc("create_staff_order_with_payment", {
       p_customer: { full_name: input.fullName, phone: input.phone },
       p_items: [{ product_id: input.productId, quantity: input.quantity }],
       p_sale_channel: input.source,
       p_source: input.source === "online" ? "website" : "store",
       p_delivery: { address: input.address, region: input.region },
       p_assigned_manager_id: input.managerId || undefined,
+      p_purchase_method: input.paymentMethod === "installment" ? "installment" : "full",
+      p_installment_months: input.paymentMethod === "installment" ? input.installmentMonths : undefined,
     });
     if (created.error) throw new Error(created.error.message);
     const result = created.data as { order_id: string; order_number: number; total_tyiyn: number };
@@ -1299,7 +1412,7 @@ class SupabaseGateway {
       p_order_id: result.order_id,
       p_payment_method: input.paymentMethod,
       p_received_tyiyn: input.paymentMethod === "installment" ? 0 : result.total_tyiyn,
-      p_installment_months: input.paymentMethod === "installment" ? 6 : undefined,
+      p_installment_months: input.paymentMethod === "installment" ? input.installmentMonths : undefined,
     });
     if (confirmed.error) throw new Error(confirmed.error.message);
     const completed = await supabase.rpc("set_order_status", {

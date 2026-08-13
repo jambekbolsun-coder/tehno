@@ -6,6 +6,8 @@ import {
   Eye,
   HandCoins,
   Phone,
+  PackagePlus,
+  Plus,
   Power,
   Search,
   ShoppingCart,
@@ -26,7 +28,12 @@ import {
 } from "@/components/crm/CrmUI";
 import { financeService } from "@/services/FinanceService";
 import { useAppStore } from "@/stores/useAppStore";
-import type { Customer, ManagerProfile, Supplier } from "@/types/domain";
+import type {
+  Customer,
+  ManagerProfile,
+  Supplier,
+  SupplierDeliveryLineInput,
+} from "@/types/domain";
 import { formatDateTime } from "@/utils/date";
 import { formatMoney, toMinor } from "@/utils/money";
 import { isOrderFinanciallyRecognized } from "@/utils/orders";
@@ -99,6 +106,139 @@ function ManagerEditor({
   );
 }
 
+type DeliveryLineDraft = SupplierDeliveryLineInput & { key: string };
+
+const emptyDeliveryLine = (): DeliveryLineDraft => ({
+  key: crypto.randomUUID(),
+  productName: "",
+  brand: "",
+  model: "",
+  supplierSku: "",
+  quantity: 1,
+  purchasePrice: 0,
+});
+
+function DeliveryLinesEditor({
+  lines,
+  onChange,
+}: {
+  lines: DeliveryLineDraft[];
+  onChange: (lines: DeliveryLineDraft[]) => void;
+}) {
+  const update = <K extends keyof SupplierDeliveryLineInput>(
+    key: string,
+    field: K,
+    value: SupplierDeliveryLineInput[K],
+  ) => onChange(lines.map((line) => line.key === key ? { ...line, [field]: value } : line));
+  return (
+    <section className="delivery-lines-editor">
+      <header>
+        <div>
+          <h3>Какие товары привезли</h3>
+          <p>Каждая строка — отдельная модель. Количество относится именно к этой модели.</p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          icon={<Plus size={16} />}
+          onClick={() => onChange([...lines, emptyDeliveryLine()])}
+        >
+          Добавить модель
+        </Button>
+      </header>
+      <div className="delivery-lines-list">
+        {lines.map((line, index) => (
+          <article className="delivery-line" key={line.key}>
+            <div className="delivery-line__number">{index + 1}</div>
+            <div className="field">
+              <label htmlFor={`delivery-product-${line.key}`}>Какой товар *</label>
+              <input
+                id={`delivery-product-${line.key}`}
+                value={line.productName}
+                onChange={(event) => update(line.key, "productName", event.target.value)}
+                placeholder="Например: робот-пылесос"
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor={`delivery-brand-${line.key}`}>Бренд *</label>
+              <input
+                id={`delivery-brand-${line.key}`}
+                value={line.brand}
+                onChange={(event) => update(line.key, "brand", event.target.value)}
+                placeholder="Xiaomi"
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor={`delivery-model-${line.key}`}>Модель *</label>
+              <input
+                id={`delivery-model-${line.key}`}
+                value={line.model}
+                onChange={(event) => update(line.key, "model", event.target.value)}
+                placeholder="S10"
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor={`delivery-sku-${line.key}`}>Артикул поставщика</label>
+              <input
+                id={`delivery-sku-${line.key}`}
+                value={line.supplierSku ?? ""}
+                onChange={(event) => update(line.key, "supplierSku", event.target.value)}
+                placeholder="Необязательно"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor={`delivery-quantity-${line.key}`}>Количество *</label>
+              <input
+                id={`delivery-quantity-${line.key}`}
+                type="number"
+                min="1"
+                step="1"
+                value={line.quantity}
+                onChange={(event) => update(line.key, "quantity", Number(event.target.value))}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor={`delivery-price-${line.key}`}>Закупка за 1 шт., сом *</label>
+              <input
+                id={`delivery-price-${line.key}`}
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={line.purchasePrice / 100 || ""}
+                onChange={(event) => update(
+                  line.key,
+                  "purchasePrice",
+                  event.target.value ? toMinor(Number(event.target.value)) : 0,
+                )}
+                required
+              />
+            </div>
+            {lines.length > 1 && (
+              <button
+                className="delivery-line__remove"
+                type="button"
+                aria-label={`Удалить модель ${index + 1}`}
+                onClick={() => onChange(lines.filter((item) => item.key !== line.key))}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </article>
+        ))}
+      </div>
+      <footer>
+        <span>Моделей: <strong>{lines.length}</strong></span>
+        <span>Всего единиц: <strong>{lines.reduce((sum, line) => sum + Math.max(0, line.quantity || 0), 0)}</strong></span>
+      </footer>
+    </section>
+  );
+}
+
 function SupplierEditor({
   open,
   onClose,
@@ -107,6 +247,7 @@ function SupplierEditor({
   onClose: () => void;
 }) {
   const addSupplier = useAppStore((state) => state.addSupplier);
+  const showToast = useAppStore((state) => state.showToast);
   const [draft, setDraft] = useState({
     name: "",
     contactPerson: "",
@@ -114,15 +255,24 @@ function SupplierEditor({
     address: "",
     notes: "",
   });
-  const submit = (event: FormEvent) => {
+  const [lines, setLines] = useState<DeliveryLineDraft[]>([emptyDeliveryLine()]);
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    addSupplier(draft);
-    onClose();
+    if (lines.some((line) => !line.productName.trim() || !line.brand.trim() || !line.model.trim() || line.quantity < 1 || line.purchasePrice <= 0)) {
+      showToast("Заполните товар, бренд, модель, количество и закупочную цену в каждой строке", "error");
+      return;
+    }
+    try {
+      await addSupplier(draft, lines);
+      onClose();
+    } catch {
+      // Ошибка уже показана единым уведомлением в хранилище.
+    }
   };
   const setField = (key: keyof typeof draft, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
   return (
-    <Modal open={open} onClose={onClose} title="Новый поставщик" size="md">
+    <Modal open={open} onClose={onClose} title="Новый поставщик и первая поставка" size="lg">
       <form className="crm-form" onSubmit={submit}>
         <div className="field">
           <label htmlFor="supplier-name">Название</label>
@@ -134,6 +284,10 @@ function SupplierEditor({
             autoFocus
           />
         </div>
+        <DeliveryLinesEditor lines={lines} onChange={setLines} />
+        <p className="form-hint">
+          После сохранения модели появятся в разделе «Каталог». Только из этих строк можно создать карточки товаров.
+        </p>
         <div className="field">
           <label htmlFor="supplier-contact">Контактное лицо</label>
           <input
@@ -174,7 +328,62 @@ function SupplierEditor({
           <Button type="button" variant="ghost" onClick={onClose}>
             Отмена
           </Button>
-          <Button type="submit">Добавить</Button>
+          <Button type="submit">Сохранить поставщика и поставку</Button>
+        </footer>
+      </form>
+    </Modal>
+  );
+}
+
+function SupplierDeliveryEditor({
+  supplier,
+  open,
+  onClose,
+}: {
+  supplier: Supplier | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const addDelivery = useAppStore((state) => state.addSupplierDelivery);
+  const showToast = useAppStore((state) => state.showToast);
+  const [lines, setLines] = useState<DeliveryLineDraft[]>([emptyDeliveryLine()]);
+  const [notes, setNotes] = useState("");
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!supplier) return;
+    if (lines.some((line) => !line.productName.trim() || !line.brand.trim() || !line.model.trim() || line.quantity < 1 || line.purchasePrice <= 0)) {
+      showToast("Заполните товар, бренд, модель, количество и закупочную цену в каждой строке", "error");
+      return;
+    }
+    try {
+      await addDelivery(supplier.id, lines, notes);
+      onClose();
+    } catch {
+      // Ошибка уже показана единым уведомлением в хранилище.
+    }
+  };
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={supplier ? `Новая поставка: ${supplier.name}` : "Новая поставка"}
+      size="lg"
+    >
+      <form className="crm-form" onSubmit={submit}>
+        <DeliveryLinesEditor lines={lines} onChange={setLines} />
+        <div className="field">
+          <label htmlFor="delivery-notes">Комментарий к поставке</label>
+          <textarea
+            id="delivery-notes"
+            rows={3}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Номер накладной, условия, примечания"
+          />
+        </div>
+        <footer className="modal-form-actions">
+          <Button type="button" variant="ghost" onClick={onClose}>Отмена</Button>
+          <Button type="submit">Сохранить поставку</Button>
         </footer>
       </form>
     </Modal>
@@ -591,6 +800,7 @@ export function CustomersSection({ role }: { role: "admin" | "manager" }) {
 
 export function SuppliersSection() {
   const suppliers = useAppStore((state) => state.suppliers);
+  const deliveries = useAppStore((state) => state.supplierDeliveries);
   const supplierProducts = useAppStore((state) => state.products);
   const debts = useAppStore((state) => state.supplierDebts);
   const payments = useAppStore((state) => state.supplierPayments);
@@ -599,6 +809,7 @@ export function SuppliersSection() {
   const showToast = useAppStore((state) => state.showToast);
   const [selected, setSelected] = useState<Supplier | null>(null);
   const [editor, setEditor] = useState(false);
+  const [deliverySupplier, setDeliverySupplier] = useState<Supplier | null>(null);
   const pay = (supplier: Supplier) => {
     const due = financeService.supplierDebt(supplier.id);
     const raw = window.prompt(
@@ -632,11 +843,21 @@ export function SuppliersSection() {
         }
       />
       <SupplierEditor open={editor} onClose={() => setEditor(false)} />
+      <SupplierDeliveryEditor
+        supplier={deliverySupplier}
+        open={!!deliverySupplier}
+        onClose={() => setDeliverySupplier(null)}
+      />
       <div className="supplier-grid">
         {suppliers.map((supplier) => {
           const products = supplierProducts.filter(
             (product) => product.supplierId === supplier.id,
           );
+          const supplierDeliveries = deliveries.filter(
+            (delivery) => delivery.supplierId === supplier.id && delivery.status === "received",
+          );
+          const pendingModels = supplierDeliveries.flatMap((delivery) => delivery.items)
+            .filter((item) => !item.productId).length;
           const debt = financeService.supplierDebt(supplier.id);
           return (
             <article className="supplier-card" key={supplier.id}>
@@ -653,13 +874,13 @@ export function SuppliersSection() {
               </header>
               <div className="supplier-card__numbers">
                 <div>
-                  <small>Товаров</small>
-                  <strong>{products.length}</strong>
+                  <small>Поставок</small>
+                  <strong>{supplierDeliveries.length}</strong>
                 </div>
                 <div>
-                  <small>Остаток</small>
+                  <small>Привезено</small>
                   <strong>
-                    {products.reduce((sum, product) => sum + product.stock, 0)}{" "}
+                    {supplierDeliveries.reduce((sum, delivery) => sum + delivery.totalQuantity, 0)}{" "}
                     шт.
                   </strong>
                 </div>
@@ -669,16 +890,18 @@ export function SuppliersSection() {
                 </div>
               </div>
               <div className="supplier-card__progress">
-                <span>Выплачено</span>
-                <strong>
-                  {formatMoney(
-                    payments
-                      .filter((item) => item.supplierId === supplier.id)
-                      .reduce((sum, item) => sum + item.amount, 0),
-                  )}
-                </strong>
+                <span>Ожидают карточки товара</span>
+                <strong>{pendingModels} моделей</strong>
               </div>
               <footer>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={<PackagePlus size={16} />}
+                  onClick={() => setDeliverySupplier(supplier)}
+                >
+                  Новая поставка
+                </Button>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -716,11 +939,11 @@ export function SuppliersSection() {
             </div>
             <div className="manager-detail__metrics">
               <div>
-                <span>Передано товаров</span>
+                <span>Всего привезено</span>
                 <strong>
-                  {supplierProducts
-                    .filter((product) => product.supplierId === selected.id)
-                    .reduce((sum, product) => sum + product.stock, 0)}
+                  {deliveries
+                    .filter((delivery) => delivery.supplierId === selected.id && delivery.status === "received")
+                    .reduce((sum, delivery) => sum + delivery.totalQuantity, 0)}
                 </strong>
               </div>
               <div>
@@ -739,6 +962,35 @@ export function SuppliersSection() {
                   )}
                 </strong>
               </div>
+            </div>
+            <h4>История поставок и моделей</h4>
+            <div className="responsive-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Поставка</th>
+                    <th>Дата</th>
+                    <th>Товар / модель</th>
+                    <th>Количество</th>
+                    <th>Закупка</th>
+                    <th>Карточка</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deliveries
+                    .filter((delivery) => delivery.supplierId === selected.id)
+                    .flatMap((delivery) => delivery.items.map((item) => (
+                      <tr key={item.id}>
+                        <td>{delivery.number}</td>
+                        <td>{delivery.deliveredAt}</td>
+                        <td><strong>{item.productName}</strong><br/><small>{item.brand} · {item.model}</small></td>
+                        <td>{item.quantity} шт.</td>
+                        <td>{formatMoney(item.purchasePrice)}</td>
+                        <td>{item.productId ? "Создана" : "Ожидает"}</td>
+                      </tr>
+                    )))}
+                </tbody>
+              </table>
             </div>
             <h4>Товары поставщика</h4>
             <div className="responsive-table">

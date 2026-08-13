@@ -1,5 +1,5 @@
 import { Archive, Boxes, CircleDollarSign, Edit3, Eye, EyeOff, Filter, ImagePlus, MinusCircle, PackageCheck, PackagePlus, Plus, RotateCcw, Search, ShoppingCart, Trash2, TriangleAlert } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { CrmEmpty, CrmPageHeader, CrmSearch, StatusBadge } from "@/components/crm/CrmUI";
@@ -7,7 +7,7 @@ import { useAppStore } from "@/stores/useAppStore";
 import type { Product } from "@/types/domain";
 import { formatDateTime, nowIso } from "@/utils/date";
 import { createId } from "@/utils/id";
-import { formatMoney, toMinor } from "@/utils/money";
+import { calculateInstallment, formatMoney, toMinor } from "@/utils/money";
 import { isOrderFinanciallyRecognized } from "@/utils/orders";
 
 const emptyProduct = (categoryId = "", supplierId = ""): Product => {
@@ -25,11 +25,45 @@ const emptyProduct = (categoryId = "", supplierId = ""): Product => {
 function ProductEditor({ product, open, onClose }: { product: Product | null; open: boolean; onClose: () => void }) {
   const categories = useAppStore((state) => state.categories);
   const suppliers = useAppStore((state) => state.suppliers);
+  const deliveries = useAppStore((state) => state.supplierDeliveries);
   const save = useAppStore((state) => state.saveProduct);
   const showToast = useAppStore((state) => state.showToast);
-  const [draft, setDraft] = useState<Product>(product ? structuredClone(product) : emptyProduct(categories[0]?.id, suppliers[0]?.id));
+  const unlinkedItems = useMemo(
+    () => deliveries.filter((delivery) => delivery.status === "received").flatMap((delivery) => delivery.items).filter((item) => !item.productId),
+    [deliveries],
+  );
+  const firstItem = unlinkedItems[0];
+  const [supplierId, setSupplierId] = useState(product?.supplierId ?? firstItem?.supplierId ?? "");
+  const [deliveryItemId, setDeliveryItemId] = useState(product ? "" : firstItem?.id ?? "");
+  const [draft, setDraft] = useState<Product>(
+    product ? structuredClone(product) : emptyProduct(categories[0]?.id, firstItem?.supplierId ?? ""),
+  );
   const [imageUrls, setImageUrls] = useState((product?.images ?? []).map((item) => item.url).join("\n"));
+  const isNew = !product;
+  const supplierItems = unlinkedItems.filter((item) => item.supplierId === supplierId);
+  const availableSuppliers = suppliers.filter((supplier) => unlinkedItems.some((item) => item.supplierId === supplier.id));
 
+  useEffect(() => {
+    if (!isNew) return;
+    const item = unlinkedItems.find((entry) => entry.id === deliveryItemId);
+    if (!item) return;
+    setDraft((current) => ({
+      ...current,
+      supplierId: item.supplierId,
+      name: { ru: item.productName, kg: item.productName, en: item.productName },
+      brand: item.brand,
+      model: item.model,
+      purchasePrice: item.purchasePrice,
+      stock: item.quantity,
+      arrivalDate: nowIso(),
+    }));
+  }, [deliveryItemId, isNew, unlinkedItems]);
+
+  const chooseSupplier = (nextSupplierId: string) => {
+    setSupplierId(nextSupplierId);
+    const first = unlinkedItems.find((item) => item.supplierId === nextSupplierId);
+    setDeliveryItemId(first?.id ?? "");
+  };
   const addImageFiles = (files: FileList | null) => {
     if (!files) return;
     const selected = Array.from(files).slice(0, Math.max(0, 5 - imageUrls.split(/\r?\n/).filter(Boolean).length));
@@ -43,26 +77,104 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
       reader.readAsDataURL(file);
     });
   };
+  const moneyChange = (field: "salePrice" | "oldPrice", value: string) =>
+    setDraft((current) => ({ ...current, [field]: value ? toMinor(Number(value)) : undefined }));
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const urls = imageUrls.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
     if (urls.length > 5) return showToast("Можно добавить максимум пять фотографий", "error");
-    if (!draft.name.ru || !draft.brand || !draft.model || !draft.categoryId || draft.salePrice <= 0) return showToast("Заполните название, бренд, модель, категорию и цену", "error");
-    const next = { ...draft, slug: draft.slug || `${draft.brand}-${draft.model}`.toLowerCase().replace(/[^a-z0-9]+/g, "-"), name: { ru: draft.name.ru, kg: draft.name.kg || draft.name.ru, en: draft.name.en || draft.name.ru }, description: { ru: draft.description.ru, kg: draft.description.kg || draft.description.ru, en: draft.description.en || draft.description.ru }, images: urls.map((url, index) => ({ id: `${draft.id}-image-${index + 1}`, url, position: index, alt: { ru: draft.name.ru, kg: draft.name.kg || draft.name.ru, en: draft.name.en || draft.name.ru } })), updatedAt: nowIso() };
-    await save(next); onClose();
+    if (isNew && !deliveryItemId) return showToast("Сначала выберите поставщика и модель из поставки", "error");
+    if (!draft.name.ru || !draft.brand || !draft.model || !draft.categoryId || draft.salePrice <= 0)
+      return showToast("Заполните название, бренд, модель, категорию и цену", "error");
+    if (draft.managerRewardValue < 0 || (draft.managerRewardType === "percent" && draft.managerRewardValue > 10_000))
+      return showToast("Проверьте комиссию менеджера: процент должен быть от 0 до 100", "error");
+    const next = {
+      ...draft,
+      slug: draft.slug || `${draft.brand}-${draft.model}-${Date.now().toString().slice(-5)}`.toLowerCase().replace(/[^a-z0-9а-яё]+/gi, "-"),
+      name: { ru: draft.name.ru, kg: draft.name.kg || draft.name.ru, en: draft.name.en || draft.name.ru },
+      description: { ru: draft.description.ru, kg: draft.description.kg || draft.description.ru, en: draft.description.en || draft.description.ru },
+      images: urls.map((url, index) => ({
+        id: `${draft.id}-image-${index + 1}`,
+        url,
+        position: index,
+        alt: { ru: draft.name.ru, kg: draft.name.kg || draft.name.ru, en: draft.name.en || draft.name.ru },
+      })),
+      updatedAt: nowIso(),
+    };
+    try {
+      await save(next, isNew ? deliveryItemId : undefined);
+      onClose();
+    } catch {
+      // Ошибка уже показана единым уведомлением в хранилище.
+    }
   };
-  const moneyChange = (field: "salePrice" | "purchasePrice" | "oldPrice", value: string) => setDraft((current) => ({ ...current, [field]: value ? toMinor(Number(value)) : undefined }));
-  return <Modal open={open} onClose={onClose} title={product ? `Редактирование: ${product.name.ru}` : "Новый товар"} size="lg"><form className="crm-form product-editor" onSubmit={submit}><div className="form-grid"><div className="field field--wide"><label>Название *</label><input value={draft.name.ru} onChange={(event) => setDraft((current) => ({ ...current, name: { ...current.name, ru: event.target.value } }))}/></div><div className="field"><label>Бренд *</label><input value={draft.brand} onChange={(event) => setDraft((current) => ({ ...current, brand: event.target.value }))}/></div><div className="field"><label>Модель *</label><input value={draft.model} onChange={(event) => setDraft((current) => ({ ...current, model: event.target.value }))}/></div><div className="field"><label>Категория</label><select value={draft.categoryId} onChange={(event) => setDraft((current) => ({ ...current, categoryId: event.target.value }))}>{categories.map((item) => <option value={item.id} key={item.id}>{item.name.ru}</option>)}</select></div><div className="field"><label>Поставщик</label><select value={draft.supplierId} onChange={(event) => setDraft((current) => ({ ...current, supplierId: event.target.value }))}><option value="">Без поставщика</option>{suppliers.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></div><div className="field"><label>Закупочная цена, сом *</label><input type="number" min="0" value={draft.purchasePrice / 100 || ""} onChange={(event) => moneyChange("purchasePrice", event.target.value)}/></div><div className="field"><label>Цена продажи, сом *</label><input type="number" min="0" value={draft.salePrice / 100 || ""} onChange={(event) => moneyChange("salePrice", event.target.value)}/></div><div className="field"><label>Старая цена, сом</label><input type="number" min="0" value={(draft.oldPrice ?? 0) / 100 || ""} onChange={(event) => moneyChange("oldPrice", event.target.value)}/></div><div className="field"><label>Количество</label><input type="number" min="0" value={draft.stock} onChange={(event) => setDraft((current) => ({ ...current, stock: Number(event.target.value) }))}/></div><div className="field"><label>Минимальный остаток</label><input type="number" min="0" value={draft.minimumStock} onChange={(event) => setDraft((current) => ({ ...current, minimumStock: Number(event.target.value) }))}/></div><div className="field"><label>Гарантия, месяцев</label><input type="number" min="0" value={draft.warrantyMonths} onChange={(event) => setDraft((current) => ({ ...current, warrantyMonths: Number(event.target.value) }))}/></div><div className="field field--wide"><label>Описание</label><textarea rows={4} value={draft.description.ru} onChange={(event) => setDraft((current) => ({ ...current, description: { ...current.description, ru: event.target.value } }))}/></div><div className="field field--wide"><label><ImagePlus size={16}/>Фотографии (макс. 5)</label><input type="file" accept="image/*" multiple onChange={(event) => addImageFiles(event.target.files)}/><textarea rows={4} value={imageUrls} onChange={(event) => setImageUrls(event.target.value)} placeholder="Также можно вставить внешние URL, каждый с новой строки"/><small>{imageUrls.split(/\r?\n/).filter((value) => value.trim()).length}/5 изображений · файлы загружаются в Supabase Storage</small></div></div><div className="form-check-grid"><label><input type="checkbox" checked={draft.isVisible} onChange={(event) => setDraft((current) => ({ ...current, isVisible: event.target.checked }))}/>Показывать на сайте</label><label><input type="checkbox" checked={draft.isFeatured} onChange={(event) => setDraft((current) => ({ ...current, isFeatured: event.target.checked }))}/>Добавить в рекомендации</label><label><input type="checkbox" checked={draft.installmentEligible} onChange={(event) => setDraft((current) => ({ ...current, installmentEligible: event.target.checked }))}/>Доступна рассрочка</label></div><footer className="modal-form-actions"><Button type="button" variant="ghost" onClick={onClose}>Отмена</Button><Button type="submit">Сохранить товар</Button></footer></form></Modal>;
+
+  return (
+    <Modal open={open} onClose={onClose} title={product ? `Редактирование: ${product.name.ru}` : "Новый товар из поставки"} size="lg">
+      <form className="crm-form product-editor" onSubmit={submit}>
+        {isNew && (
+          <section className="product-source-panel">
+            <header>
+              <PackagePlus size={20}/>
+              <div><h3>Источник товара</h3><p>Без оформленной поставки карточку создать нельзя.</p></div>
+            </header>
+            {unlinkedItems.length ? (
+              <div className="form-grid">
+                <div className="field">
+                  <label htmlFor="product-source-supplier">Поставщик *</label>
+                  <select id="product-source-supplier" value={supplierId} onChange={(event) => chooseSupplier(event.target.value)} required>
+                    {availableSuppliers.map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.name}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label htmlFor="product-source-model">Модель из поставки *</label>
+                  <select id="product-source-model" value={deliveryItemId} onChange={(event) => setDeliveryItemId(event.target.value)} required>
+                    {supplierItems.map((item) => (
+                      <option value={item.id} key={item.id}>{item.brand} {item.model} · {item.quantity} шт.</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ) : <p className="product-source-panel__empty">Нет моделей, ожидающих карточку. Сначала оформите поставку в разделе «Поставщики».</p>}
+          </section>
+        )}
+        <div className="form-grid">
+          <div className="field field--wide"><label htmlFor="product-name">Название *</label><input id="product-name" value={draft.name.ru} onChange={(event) => setDraft((current) => ({ ...current, name: { ...current.name, ru: event.target.value } }))} required/></div>
+          <div className="field"><label htmlFor="product-brand">Бренд *</label><input id="product-brand" value={draft.brand} readOnly={isNew} onChange={(event) => setDraft((current) => ({ ...current, brand: event.target.value }))}/></div>
+          <div className="field"><label htmlFor="product-model">Модель *</label><input id="product-model" value={draft.model} readOnly={isNew} onChange={(event) => setDraft((current) => ({ ...current, model: event.target.value }))}/></div>
+          <div className="field"><label htmlFor="product-category">Категория *</label><select id="product-category" value={draft.categoryId} onChange={(event) => setDraft((current) => ({ ...current, categoryId: event.target.value }))} required>{categories.map((item) => <option value={item.id} key={item.id}>{item.name.ru}</option>)}</select></div>
+          <div className="field"><label htmlFor="product-supplier">Поставщик</label><input id="product-supplier" value={suppliers.find((item) => item.id === draft.supplierId)?.name ?? ""} readOnly/></div>
+          <div className="field"><label htmlFor="product-purchase-price">Закупочная цена, сом</label><input id="product-purchase-price" value={draft.purchasePrice / 100 || 0} readOnly/></div>
+          <div className="field"><label htmlFor="product-delivery-quantity">Количество по поставке</label><input id="product-delivery-quantity" value={draft.stock} readOnly/></div>
+          <div className="field"><label htmlFor="product-sale-price">Цена продажи, сом *</label><input id="product-sale-price" type="number" min="0.01" step="0.01" value={draft.salePrice / 100 || ""} onChange={(event) => moneyChange("salePrice", event.target.value)} required/></div>
+          <div className="field"><label htmlFor="product-old-price">Старая цена, сом</label><input id="product-old-price" type="number" min="0" step="0.01" value={(draft.oldPrice ?? 0) / 100 || ""} onChange={(event) => moneyChange("oldPrice", event.target.value)}/></div>
+          <div className="field"><label htmlFor="product-manager-reward-type">Комиссия менеджера *</label><select id="product-manager-reward-type" value={draft.managerRewardType} onChange={(event) => setDraft((current) => ({ ...current, managerRewardType: event.target.value as Product["managerRewardType"], managerRewardValue: 0 }))}><option value="percent">Процент с продажи</option><option value="fixed">Фиксировано за штуку</option></select></div>
+          <div className="field"><label htmlFor="product-manager-reward">{draft.managerRewardType === "percent" ? "Процент менеджера, % *" : "Менеджеру за 1 шт., сом *"}</label><input id="product-manager-reward" type="number" min="0" max={draft.managerRewardType === "percent" ? 100 : undefined} step="0.01" value={draft.managerRewardValue / 100 || ""} onChange={(event) => setDraft((current) => ({ ...current, managerRewardValue: event.target.value ? toMinor(Number(event.target.value)) : 0 }))} required/></div>
+          <div className="field"><label htmlFor="product-minimum-stock">Минимальный остаток</label><input id="product-minimum-stock" type="number" min="0" value={draft.minimumStock} onChange={(event) => setDraft((current) => ({ ...current, minimumStock: Number(event.target.value) }))}/></div>
+          <div className="field"><label htmlFor="product-warranty">Гарантия, месяцев</label><input id="product-warranty" type="number" min="0" value={draft.warrantyMonths} onChange={(event) => setDraft((current) => ({ ...current, warrantyMonths: Number(event.target.value) }))}/></div>
+          <div className="field field--wide"><label htmlFor="product-description">Описание</label><textarea id="product-description" rows={4} value={draft.description.ru} onChange={(event) => setDraft((current) => ({ ...current, description: { ...current.description, ru: event.target.value } }))}/></div>
+          <div className="field field--wide"><label htmlFor="product-images"><ImagePlus size={16}/>Фотографии (макс. 5)</label><input id="product-images" type="file" accept="image/*" multiple onChange={(event) => addImageFiles(event.target.files)}/><textarea aria-label="Внешние URL фотографий" rows={4} value={imageUrls} onChange={(event) => setImageUrls(event.target.value)} placeholder="Также можно вставить внешние URL, каждый с новой строки"/><small>{imageUrls.split(/\r?\n/).filter((value) => value.trim()).length}/5 изображений · файлы загружаются в Supabase Storage</small></div>
+        </div>
+        <div className="form-check-grid"><label><input type="checkbox" checked={draft.isVisible} onChange={(event) => setDraft((current) => ({ ...current, isVisible: event.target.checked }))}/>Показывать на сайте</label><label><input type="checkbox" checked={draft.isFeatured} onChange={(event) => setDraft((current) => ({ ...current, isFeatured: event.target.checked }))}/>Добавить в рекомендации</label><label><input type="checkbox" checked={draft.installmentEligible} onChange={(event) => setDraft((current) => ({ ...current, installmentEligible: event.target.checked }))}/>Доступна рассрочка</label></div>
+        <footer className="modal-form-actions"><Button type="button" variant="ghost" onClick={onClose}>Отмена</Button><Button type="submit" disabled={isNew && !deliveryItemId}>Сохранить товар</Button></footer>
+      </form>
+    </Modal>
+  );
 }
 
 export function CatalogSection({ role }: { role: "admin" | "manager" }) {
   const products = useAppStore((state) => state.products);
   const suppliers = useAppStore((state) => state.suppliers);
+  const supplierDeliveries = useAppStore((state) => state.supplierDeliveries);
   const archive = useAppStore((state) => state.archiveProduct);
   const remove = useAppStore((state) => state.deleteProduct);
   const [query, setQuery] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [editing, setEditing] = useState<Product | null | "new">(null);
+  const pendingDeliveryItems = supplierDeliveries
+    .filter((delivery) => delivery.status === "received")
+    .flatMap((delivery) => delivery.items)
+    .filter((item) => !item.productId);
   const visible = useMemo(() => {
     const q = query.toLowerCase();
     return products.filter((product) => {
@@ -71,7 +183,7 @@ export function CatalogSection({ role }: { role: "admin" | "manager" }) {
       return match && (stockFilter === "all" || (stockFilter === "low" ? product.stock - product.reserved <= product.minimumStock : stockFilter === "empty" ? product.stock - product.reserved <= 0 : product.stock - product.reserved > 0));
     });
   }, [products, suppliers, query, stockFilter, role]);
-  return <div className="crm-page catalog-section"><CrmPageHeader title="Каталог товаров" text={role === "admin" ? "Управление ценами, остатками и отображением на сайте." : "Актуальные товары, цены продажи, остатки и ваша комиссия."} actions={role === "admin" ? <Button icon={<Plus size={17}/>} onClick={() => setEditing("new")}>Добавить товар</Button> : undefined}/><section className="crm-panel catalog-toolbar-crm"><CrmSearch value={query} onChange={setQuery} placeholder={role === "admin" ? "Название, бренд, модель, SKU или поставщик…" : "Название, бренд, модель или SKU…"}/><select value={stockFilter} onChange={(event) => setStockFilter(event.target.value)}><option value="all">Все остатки</option><option value="in">В наличии</option><option value="low">Низкий остаток</option><option value="empty">Нет в наличии</option></select><span>{visible.length} позиций</span></section><section className="product-admin-grid">{visible.map((product) => { const available = product.stock - product.reserved; const supplier = suppliers.find((item) => item.id === product.supplierId); return <article className={`crm-panel product-admin-card${product.isArchived ? " is-archived" : ""}`} key={product.id}><div className="product-admin-card__image"><img src={product.images[0]?.url || "/logo.jpg"} alt={product.name.ru}/><span className={available <= product.minimumStock ? "low" : ""}>{available} шт.</span></div><div className="product-admin-card__body"><small>{product.brand} · {product.model}</small><h3>{product.name.ru}</h3><p>{product.sku}{role === "admin" && supplier ? ` · ${supplier.name}` : ""}</p><div className="product-admin-card__prices"><strong>{formatMoney(product.salePrice)}</strong>{product.oldPrice && <s>{formatMoney(product.oldPrice)}</s>}</div><div className="product-admin-card__meta"><span>Комиссия: {product.managerRewardType === "percent" ? `${product.managerRewardValue / 100}%` : formatMoney(product.managerRewardValue)}</span>{role === "admin" && <span className="private-money">Закупка: {formatMoney(product.purchasePrice)}</span>}</div><div className="product-admin-card__status">{product.isVisible && !product.isArchived ? <span className="visibility-on"><Eye size={15}/>На сайте</span> : <span className="visibility-off"><EyeOff size={15}/>Скрыт</span>}</div>{role === "admin" && <footer className="table-actions"><button onClick={() => setEditing(product)} title="Редактировать"><Edit3 size={16}/></button><button onClick={() => void archive(product.id)} title={product.isArchived ? "Восстановить" : "Архивировать"}>{product.isArchived ? <RotateCcw size={16}/> : <Archive size={16}/>}</button><button className="danger" onClick={() => window.confirm(`Удалить ${product.name.ru}?`) && void remove(product.id)} title="Удалить"><Trash2 size={16}/></button></footer>}</div></article>; })}{!visible.length && <div className="crm-panel"><CrmEmpty title="Товары не найдены" text="Измените поиск или фильтр остатка."/></div>}</section>{editing && <ProductEditor key={editing === "new" ? "new" : editing.id} product={editing === "new" ? null : editing} open onClose={() => setEditing(null)}/>}</div>;
+  return <div className="crm-page catalog-section"><CrmPageHeader title="Каталог товаров" text={role === "admin" ? `Карточка создаётся только из поставки. Ожидают добавления: ${pendingDeliveryItems.length} моделей.` : "Актуальные товары, цены продажи, остатки и ваша комиссия."} actions={role === "admin" ? <Button icon={<Plus size={17}/>} disabled={!pendingDeliveryItems.length} onClick={() => setEditing("new")}>Добавить товар</Button> : undefined}/><section className="crm-panel catalog-toolbar-crm"><CrmSearch value={query} onChange={setQuery} placeholder={role === "admin" ? "Название, бренд, модель, SKU или поставщик…" : "Название, бренд, модель или SKU…"}/><select value={stockFilter} onChange={(event) => setStockFilter(event.target.value)}><option value="all">Все остатки</option><option value="in">В наличии</option><option value="low">Низкий остаток</option><option value="empty">Нет в наличии</option></select><span>{visible.length} позиций</span></section><section className="product-admin-grid">{visible.map((product) => { const available = product.stock - product.reserved; const supplier = suppliers.find((item) => item.id === product.supplierId); return <article className={`crm-panel product-admin-card${product.isArchived ? " is-archived" : ""}`} key={product.id}><div className="product-admin-card__image"><img src={product.images[0]?.url || "/logo.jpg"} alt={product.name.ru}/><span className={available <= product.minimumStock ? "low" : ""}>{available} шт.</span></div><div className="product-admin-card__body"><small>{product.brand} · {product.model}</small><h3>{product.name.ru}</h3><p>{product.sku}{role === "admin" && supplier ? ` · ${supplier.name}` : ""}</p><div className="product-admin-card__prices"><strong>{formatMoney(product.salePrice)}</strong>{product.oldPrice && <s>{formatMoney(product.oldPrice)}</s>}</div><div className="product-admin-card__meta"><span>Комиссия: {product.managerRewardType === "percent" ? `${product.managerRewardValue / 100}%` : formatMoney(product.managerRewardValue)}</span>{role === "admin" && <span className="private-money">Закупка: {formatMoney(product.purchasePrice)}</span>}</div><div className="product-admin-card__status">{product.isVisible && !product.isArchived ? <span className="visibility-on"><Eye size={15}/>На сайте</span> : <span className="visibility-off"><EyeOff size={15}/>Скрыт</span>}</div>{role === "admin" && <footer className="table-actions"><button onClick={() => setEditing(product)} title="Редактировать"><Edit3 size={16}/></button><button onClick={() => void archive(product.id)} title={product.isArchived ? "Восстановить" : "Архивировать"}>{product.isArchived ? <RotateCcw size={16}/> : <Archive size={16}/>}</button><button className="danger" onClick={() => window.confirm(`Удалить ${product.name.ru} с сайта? История продаж и финансов сохранится.`) && void remove(product.id)} title="Удалить с сайта"><Trash2 size={16}/></button></footer>}</div></article>; })}{!visible.length && <div className="crm-panel"><CrmEmpty title="Товары не найдены" text="Измените поиск или фильтр остатка."/></div>}</section>{editing && <ProductEditor key={editing === "new" ? "new" : editing.id} product={editing === "new" ? null : editing} open onClose={() => setEditing(null)}/>}</div>;
 }
 
 export function InventorySection() {
@@ -96,6 +208,7 @@ function SaleEditor({ open, onClose, role, source }: { open: boolean; onClose: (
   const session = useAppStore((state) => state.session)!;
   const products = useAppStore((state) => state.products).filter((product) => product.stock - product.reserved > 0);
   const managers = useAppStore((state) => state.managers).filter((manager) => manager.status === "active");
+  const settings = useAppStore((state) => state.settings);
   const createSale = useAppStore((state) => state.createSale);
   const showToast = useAppStore((state) => state.showToast);
   const [productId, setProductId] = useState(products[0]?.id ?? "");
@@ -105,6 +218,14 @@ function SaleEditor({ open, onClose, role, source }: { open: boolean; onClose: (
   const [quantity, setQuantity] = useState(1);
   const [region, setRegion] = useState("Бишкек");
   const [address, setAddress] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "transfer" | "installment">("cash");
+  const [installmentMonths, setInstallmentMonths] = useState(
+    settings.installmentPlans.find((plan) => plan.enabled)?.months ?? 6,
+  );
+  const selectedProduct = products.find((product) => product.id === productId);
+  const installmentPreview = paymentMethod === "installment" && selectedProduct
+    ? calculateInstallment(selectedProduct.salePrice * quantity, installmentMonths, settings.installmentPlans)
+    : undefined;
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     try {
@@ -117,7 +238,8 @@ function SaleEditor({ open, onClose, role, source }: { open: boolean; onClose: (
         address: address.trim() || "Уточнить",
         region: region.trim() || "Уточнить",
         source,
-        paymentMethod: "cash",
+        paymentMethod,
+        installmentMonths: paymentMethod === "installment" ? installmentMonths : undefined,
       });
       showToast(source === "online"
         ? `Заказ ${order.number} создан. Выручка появится после завершения доставки.`
@@ -127,7 +249,7 @@ function SaleEditor({ open, onClose, role, source }: { open: boolean; onClose: (
       showToast(error instanceof Error ? error.message : "Ошибка", "error");
     }
   };
-  return <Modal open={open} onClose={onClose} title={source === "online" ? "Создать заказ с доставкой" : "Провести продажу"} size="md"><form className="crm-form" onSubmit={submit}><div className="field"><label>Товар</label><select value={productId} onChange={(event) => setProductId(event.target.value)}>{products.map((product) => <option value={product.id} key={product.id}>{product.name.ru} · {product.stock - product.reserved} шт.</option>)}</select></div><div className="field"><label>Количество</label><input type="number" min="1" value={quantity} onChange={(event) => setQuantity(Number(event.target.value))}/></div><div className="field"><label>Клиент</label><input value={fullName} onChange={(event) => setFullName(event.target.value)} required/></div><div className="field"><label>Телефон</label><input value={phone} onChange={(event) => setPhone(event.target.value)} required/></div>{source === "online" && <><div className="field"><label>Регион / город</label><input value={region} onChange={(event) => setRegion(event.target.value)} required/></div><div className="field"><label>Адрес доставки</label><input value={address} onChange={(event) => setAddress(event.target.value)} required/></div></>}<div className="field"><label>Менеджер</label><select value={managerId} onChange={(event) => setManagerId(event.target.value)} disabled={role === "manager"}>{managers.filter((manager) => role === "admin" || manager.id === session.managerProfileId).map((manager) => <option value={manager.id} key={manager.id}>{manager.name}</option>)}</select></div>{source === "online" && <p className="form-note">Курьерский выкуп не считается деньгами магазина. Выручка, прибыль и комиссия начислятся только после статуса «Завершён».</p>}<footer className="modal-form-actions"><Button type="button" variant="ghost" onClick={onClose}>Отмена</Button><Button type="submit">{source === "online" ? "Создать заказ" : "Провести продажу"}</Button></footer></form></Modal>;
+  return <Modal open={open} onClose={onClose} title={source === "online" ? "Создать заказ с доставкой" : "Провести продажу"} size="md"><form className="crm-form" onSubmit={submit}><div className="field"><label>Товар</label><select value={productId} onChange={(event) => setProductId(event.target.value)}>{products.map((product) => <option value={product.id} key={product.id}>{product.name.ru} · {product.stock - product.reserved} шт.</option>)}</select></div><div className="field"><label>Количество</label><input type="number" min="1" max={selectedProduct ? selectedProduct.stock - selectedProduct.reserved : undefined} value={quantity} onChange={(event) => setQuantity(Number(event.target.value))}/></div><div className="field"><label>Клиент</label><input value={fullName} onChange={(event) => setFullName(event.target.value)} required/></div><div className="field"><label>Телефон</label><input value={phone} onChange={(event) => setPhone(event.target.value)} required/></div>{source === "online" && <><div className="field"><label>Регион / город</label><input value={region} onChange={(event) => setRegion(event.target.value)} required/></div><div className="field"><label>Адрес доставки</label><input value={address} onChange={(event) => setAddress(event.target.value)} required/></div></>}<div className="field"><label>Способ оплаты</label><select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as typeof paymentMethod)}><option value="cash">Наличные</option><option value="card">Карта</option><option value="transfer">Перевод</option>{selectedProduct?.installmentEligible && <option value="installment">Рассрочка</option>}</select></div>{paymentMethod === "installment" && <><div className="field"><label>Срок рассрочки</label><select value={installmentMonths} onChange={(event) => setInstallmentMonths(Number(event.target.value))}>{settings.installmentPlans.filter((plan) => plan.enabled).map((plan) => <option value={plan.months} key={plan.id}>{plan.months} мес. · {plan.rateBasisPoints / 100}%</option>)}</select></div>{installmentPreview && <p className="form-note">Сумма с наценкой: <strong>{formatMoney(installmentPreview.total)}</strong> · ежемесячно до <strong>{formatMoney(installmentPreview.monthlyPayment)}</strong>. График в базе распределит тыйыны без расхождения.</p>}</>}<div className="field"><label>Менеджер</label><select value={managerId} onChange={(event) => setManagerId(event.target.value)} disabled={role === "manager"}>{managers.filter((manager) => role === "admin" || manager.id === session.managerProfileId).map((manager) => <option value={manager.id} key={manager.id}>{manager.name}</option>)}</select></div>{source === "online" && <p className="form-note">Курьерский выкуп не считается деньгами магазина. Выручка, прибыль и комиссия начислятся только после статуса «Завершён».</p>}<footer className="modal-form-actions"><Button type="button" variant="ghost" onClick={onClose}>Отмена</Button><Button type="submit">{source === "online" ? "Создать заказ" : "Провести продажу"}</Button></footer></form></Modal>;
 }
 
 export function SalesSection({ role, source }: { role: "admin" | "manager"; source?: "online" | "offline" }) {
