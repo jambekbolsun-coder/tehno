@@ -40,6 +40,8 @@ const statusLabels: Record<LeadStatus, string> = {
   confirmed: "Продажа подтверждена",
   courier_ordered: "Курьер заказан",
   packed: "Товар собран",
+  courier_picked_up: "Курьер забрал товар",
+  courier_in_transit: "Курьер в пути",
   handed_to_courier: "Передан курьеру",
   received: "Клиент получил",
   paid: "Оплачено",
@@ -48,6 +50,30 @@ const statusLabels: Record<LeadStatus, string> = {
   refused: "Клиент отказался",
   cancelled: "Отменено",
 };
+
+const confirmStatusTransition = (status: LeadStatus) => {
+  if (status === "completed")
+    return window.confirm("Завершить заказ? После подтверждения сумма попадёт в выручку, прибыль и комиссию.");
+  if (status === "refused" || status === "cancelled")
+    return window.confirm("Подтвердить отказ/отмену? Выданный курьеру товар будет возвращён на склад, а выкуп не попадёт в выручку.");
+  return true;
+};
+
+const nextStatuses: Partial<Record<LeadStatus, readonly LeadStatus[]>> = {
+  new: ["working", "confirmed", "refused", "cancelled"],
+  working: ["confirmed", "refused", "cancelled"],
+  confirmed: ["courier_picked_up", "completed", "refused", "cancelled"],
+  courier_picked_up: ["courier_in_transit", "completed", "refused", "cancelled"],
+  courier_in_transit: ["completed", "refused", "cancelled"],
+  completed: [],
+  refused: [],
+  cancelled: [],
+};
+
+const availableStatuses = (current: LeadStatus) => [
+  current,
+  ...(nextStatuses[current] ?? []),
+];
 
 const AI_SAMPLE = `№ 2
 📦 Заказ: руч пыл
@@ -104,7 +130,9 @@ export function AISection({ role }: { role: "admin" | "manager" }) {
         createdAt: now,
         updatedAt: now,
       });
-      showToast(`Продажа ${order.number} создана, склад и финансы обновлены`);
+      showToast(
+        `Заказ ${order.number} создан. Деньги попадут в финансы только после завершения.`,
+      );
       setParsed(null);
     } catch (error) {
       showToast(
@@ -492,11 +520,14 @@ export function LeadsSection({ role }: { role: "admin" | "manager" }) {
                     <select
                       className={`status-select status-select--${lead.status}`}
                       value={lead.status}
-                      onChange={(event) =>
-                        changeStatus(lead.id, event.target.value as LeadStatus)
-                      }
+                      onChange={(event) => {
+                        const nextStatus = event.target.value as LeadStatus;
+                        if (confirmStatusTransition(nextStatus))
+                          void changeStatus(lead.id, nextStatus, "Статус изменён в списке заявок");
+                        else event.currentTarget.value = lead.status;
+                      }}
                     >
-                      {LEAD_STATUSES.map((item) => (
+                      {availableStatuses(lead.status).map((item) => (
                         <option value={item} key={item}>
                           {statusLabels[item]}
                         </option>
@@ -561,7 +592,9 @@ export function LeadsSection({ role }: { role: "admin" | "manager" }) {
                   );
                   return (
                     <div className="lead-product" key={item.productId}>
-                      {product && <img src={product.images[0].url} alt="" />}
+                      {product?.images[0] && (
+                        <img src={product.images[0]?.url || "/logo.jpg"} alt="" />
+                      )}
                       <span>
                         <strong>{item.productName}</strong>
                         <small>
@@ -645,6 +678,7 @@ export function FunnelSection({ role }: { role: "admin" | "manager" }) {
   const session = useAppStore((state) => state.session)!;
   const allLeads = useAppStore((state) => state.leads);
   const changeStatus = useAppStore((state) => state.changeLeadStatus);
+  const showToast = useAppStore((state) => state.showToast);
   const managers = useAppStore((state) => state.managers);
   const [dragged, setDragged] = useState<string | null>(null);
   const leads =
@@ -652,14 +686,18 @@ export function FunnelSection({ role }: { role: "admin" | "manager" }) {
       ? allLeads
       : allLeads.filter((lead) => lead.managerId === session.managerProfileId);
   const drop = (status: LeadStatus) => {
-    if (dragged) changeStatus(dragged, status, "Перемещено на Kanban-доске");
+    const lead = leads.find((item) => item.id === dragged);
+    if (lead && status !== lead.status && !availableStatuses(lead.status).includes(status))
+      showToast(`Переход «${statusLabels[lead.status]}» → «${statusLabels[status]}» недоступен`, "error");
+    else if (dragged && confirmStatusTransition(status))
+      void changeStatus(dragged, status, "Перемещено на Kanban-доске");
     setDragged(null);
   };
   return (
     <div className="crm-page funnel-section">
       <CrmPageHeader
         title={role === "admin" ? "Воронка продаж и доставки" : "Моя воронка"}
-        text="Перетаскивайте карточки между этапами. Каждое изменение сохраняется в истории."
+        text="Деньги, прибыль и комиссия учитываются только на этапе «Завершён». При отказе товар автоматически возвращается на склад."
         actions={
           <span className="kanban-hint">
             <GripVertical size={16} />
@@ -698,6 +736,20 @@ export function FunnelSection({ role }: { role: "admin" | "manager" }) {
                     <h4>{lead.fullName}</h4>
                     <p>{lead.items[0]?.productName}</p>
                     <strong>{formatMoney(lead.total)}</strong>
+                    <select
+                      className={`kanban-status-select status-select--${lead.status}`}
+                      value={lead.status}
+                      aria-label={`Статус ${lead.number}`}
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onChange={(event) => {
+                        const nextStatus = event.target.value as LeadStatus;
+                        if (confirmStatusTransition(nextStatus))
+                          void changeStatus(lead.id, nextStatus, "Статус изменён в карточке воронки");
+                        else event.currentTarget.value = lead.status;
+                      }}
+                    >
+                      {availableStatuses(lead.status).map((item) => <option key={item} value={item}>{statusLabels[item]}</option>)}
+                    </select>
                     <footer>
                       <span className="avatar-mini">
                         {managers

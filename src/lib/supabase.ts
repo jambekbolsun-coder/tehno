@@ -3,6 +3,13 @@ import type { Database } from "@/types/supabase";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const INVITE_FLOW_KEY = "tehno-center-invite-flow";
+
+if (typeof window !== "undefined") {
+  const callback = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  if (callback.get("type") === "invite")
+    window.sessionStorage.setItem(INVITE_FLOW_KEY, "1");
+}
 
 if (!supabaseUrl || !supabasePublishableKey) {
   throw new Error(
@@ -27,3 +34,8 @@ export const supabase = createClient<Database>(
 
 export const publicFunctionUrl = `${supabaseUrl}/functions/v1/public-shop`;
 export const publishableKey = supabasePublishableKey;
+export const hasPendingInvite = () =>
+  typeof window !== "undefined" &&
+  window.sessionStorage.getItem(INVITE_FLOW_KEY) === "1";
+export const clearPendingInvite = () =>
+  window.sessionStorage.removeItem(INVITE_FLOW_KEY);

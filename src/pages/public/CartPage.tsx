@@ -55,7 +55,7 @@ export default function CartPage() {
                   className="cart-item__image"
                 >
                   <img
-                    src={product.images[0].url}
+                    src={product.images[0]?.url || "/logo.jpg"}
                     alt={product.name[language]}
                   />
                 </Link>

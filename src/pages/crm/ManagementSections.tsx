@@ -46,6 +46,7 @@ import type { Expense, FAQ, Language, ReturnRecord } from "@/types/domain";
 import { formatDateTime, nowIso } from "@/utils/date";
 import { createId } from "@/utils/id";
 import { formatMoney, formatPercent, toMinor } from "@/utils/money";
+import { isOrderFinanciallyRecognized } from "@/utils/orders";
 
 const expenseLabels: Record<Expense["category"], string> = {
   rent: "Аренда",
@@ -623,6 +624,10 @@ export function FinanceSection() {
   const suppliers = useAppStore((state) => state.suppliers);
   const managers = useAppStore((state) => state.managers);
   const expenses = useAppStore((state) => state.expenses);
+  const orders = useAppStore((state) => state.orders);
+  const pendingCourierAdvance = orders
+    .filter((order) => order.courierAdvanceStatus === "pending")
+    .reduce((sum, order) => sum + (order.courierAdvance ?? order.total), 0);
   return (
     <div className="crm-page finance-section">
       <CrmPageHeader
@@ -678,6 +683,10 @@ export function FinanceSection() {
             <div>
               <dt>Офлайн-продажи</dt>
               <dd>{formatMoney(summary.offlineRevenue)}</dd>
+            </div>
+            <div>
+              <dt>Выкуп курьера (ещё не выручка)</dt>
+              <dd>{formatMoney(pendingCourierAdvance)}</dd>
             </div>
           </dl>
         </section>
@@ -795,7 +804,8 @@ export function FinanceSection() {
         <ShieldCheck size={19} />
         <p>
           <strong>Контроль двойного учёта включён.</strong> Каждый расход входит
-          в формулу один раз через единый реестр операций.
+          в формулу один раз. Выкуп курьера остаётся ожидающим и становится
+          выручкой только после статуса «Завершён».
         </p>
       </div>
     </div>
@@ -819,7 +829,7 @@ export function AnalyticsSection() {
     [allAnalytics, cutoff],
   );
   const orders = useMemo(
-    () => allOrders.filter((order) => new Date(order.createdAt).getTime() >= cutoff),
+    () => allOrders.filter((order) => isOrderFinanciallyRecognized(order) && new Date(order.createdAt).getTime() >= cutoff),
     [allOrders, cutoff],
   );
   const visitors = new Set(analytics.map((event) => event.sessionId)).size;

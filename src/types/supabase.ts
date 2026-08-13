@@ -1262,12 +1262,17 @@ export type Database = {
           created_by: string | null
           customer_comment: string | null
           customer_id: string
+          courier_advance_status: string
+          courier_advance_tyiyn: number
           delivery_address: string | null
           delivery_city: string | null
           delivery_region: string | null
           delivery_tyiyn: number
           discount_tyiyn: number
           financial_processed: boolean
+          inventory_processed: boolean
+          inventory_reserved: boolean
+          inventory_returned: boolean
           id: string
           internal_comment: string | null
           lead_id: string | null
@@ -1294,12 +1299,17 @@ export type Database = {
           created_by?: string | null
           customer_comment?: string | null
           customer_id: string
+          courier_advance_status?: string
+          courier_advance_tyiyn?: number
           delivery_address?: string | null
           delivery_city?: string | null
           delivery_region?: string | null
           delivery_tyiyn?: number
           discount_tyiyn?: number
           financial_processed?: boolean
+          inventory_processed?: boolean
+          inventory_reserved?: boolean
+          inventory_returned?: boolean
           id?: string
           internal_comment?: string | null
           lead_id?: string | null
@@ -1326,12 +1336,17 @@ export type Database = {
           created_by?: string | null
           customer_comment?: string | null
           customer_id?: string
+          courier_advance_status?: string
+          courier_advance_tyiyn?: number
           delivery_address?: string | null
           delivery_city?: string | null
           delivery_region?: string | null
           delivery_tyiyn?: number
           discount_tyiyn?: number
           financial_processed?: boolean
+          inventory_processed?: boolean
+          inventory_reserved?: boolean
+          inventory_returned?: boolean
           id?: string
           internal_comment?: string | null
           lead_id?: string | null
@@ -2289,6 +2304,8 @@ export type Database = {
         Returns: {
           assigned_manager_id: string | null
           completed_at: string | null
+          courier_advance_status: string
+          courier_advance_tyiyn: number
           created_at: string
           created_by: string | null
           customer_comment: string | null
@@ -2300,6 +2317,9 @@ export type Database = {
           discount_tyiyn: number
           financial_processed: boolean
           id: string
+          inventory_processed: boolean
+          inventory_reserved: boolean
+          inventory_returned: boolean
           internal_comment: string | null
           lead_id: string | null
           order_number: number

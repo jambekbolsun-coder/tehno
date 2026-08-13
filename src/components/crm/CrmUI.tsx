@@ -6,7 +6,7 @@ export function CrmPageHeader({ title, text, actions }: { title: string; text?: 
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const labels: Record<string, string> = { new: "Новая", working: "В работе", consulted: "Консультация", confirmed: "Подтверждено", courier_ordered: "Курьер", packed: "Собран", handed_to_courier: "В доставке", received: "Получен", paid: "Оплачено", installment: "Рассрочка", completed: "Завершено", refused: "Отказ", cancelled: "Отменено", active: "Активен", paused: "Пауза", archived: "Архив", published: "Опубликован", hidden: "Скрыт", draft: "Черновик", accrued: "Начислено" };
+  const labels: Record<string, string> = { new: "Новый заказ", working: "В работе", consulted: "Консультация", confirmed: "Подтверждён", courier_ordered: "Курьер заказан", packed: "Собран", courier_picked_up: "Курьер забрал", courier_in_transit: "Курьер в пути", handed_to_courier: "В доставке", received: "Получен", paid: "Оплачено", installment: "Рассрочка", completed: "Завершён", refused: "Отказ", cancelled: "Отменён", active: "Активен", paused: "Пауза", archived: "Архив", published: "Опубликован", hidden: "Скрыт", draft: "Черновик", accrued: "Начислено" };
   return <span className={`status-badge status-badge--${status}`}>{labels[status] ?? status}</span>;
 }
 

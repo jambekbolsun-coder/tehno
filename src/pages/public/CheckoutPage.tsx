@@ -349,7 +349,7 @@ export default function CheckoutPage() {
             {checkoutItems.map((item) => (
               <div key={item.product.id}>
                 <img
-                  src={item.product.images[0].url}
+                  src={item.product.images[0]?.url || "/logo.jpg"}
                   alt={item.product.name[language]}
                 />
                 <span>

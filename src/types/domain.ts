@@ -171,6 +171,8 @@ export type LeadStatus =
   | "confirmed"
   | "courier_ordered"
   | "packed"
+  | "courier_picked_up"
+  | "courier_in_transit"
   | "handed_to_courier"
   | "received"
   | "paid"
@@ -245,6 +247,12 @@ export interface Order extends Entity {
   installment?: InstallmentSelection;
   source: "online" | "offline";
   status: LeadStatus;
+  financialProcessed?: boolean;
+  inventoryReserved?: boolean;
+  inventoryProcessed?: boolean;
+  inventoryReturned?: boolean;
+  courierAdvance?: Money;
+  courierAdvanceStatus?: "not_received" | "pending" | "settled" | "refunded";
 }
 
 export interface OrderStatusHistory {

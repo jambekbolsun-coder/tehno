@@ -29,6 +29,7 @@ import { useAppStore } from "@/stores/useAppStore";
 import type { Customer, ManagerProfile, Supplier } from "@/types/domain";
 import { formatDateTime } from "@/utils/date";
 import { formatMoney, toMinor } from "@/utils/money";
+import { isOrderFinanciallyRecognized } from "@/utils/orders";
 
 function ManagerEditor({
   open,
@@ -38,13 +39,13 @@ function ManagerEditor({
   onClose: () => void;
 }) {
   const addManager = useAppStore((state) => state.addManager);
-  const [userId, setUserId] = useState("");
+  const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("+996 ");
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     await addManager({
-      userId: userId.trim(),
+      email: email.trim().toLowerCase(),
       name: name.trim(),
       phone: phone.trim(),
     });
@@ -54,13 +55,14 @@ function ManagerEditor({
     <Modal open={open} onClose={onClose} title="Новый менеджер" size="md">
       <form className="crm-form" onSubmit={submit}>
         <div className="field">
-          <label htmlFor="manager-user-id">ID пользователя Supabase</label>
+          <label htmlFor="manager-email">Email менеджера</label>
           <input
-            id="manager-user-id"
-            value={userId}
-            onChange={(event) => setUserId(event.target.value)}
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-            pattern="[0-9a-fA-F-]{36}"
+            id="manager-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="manager@example.com"
+            autoComplete="email"
             required
             autoFocus
           />
@@ -84,13 +86,13 @@ function ManagerEditor({
           />
         </div>
         <p className="form-hint">
-          Сначала создайте пользователя в Supabase Authentication, затем вставьте сюда его UUID. Пароль остаётся только у вас и сотрудника.
+          Сотрудник получит письмо со ссылкой, сам задаст пароль и сразу войдёт в кабинет менеджера.
         </p>
         <footer className="modal-form-actions">
           <Button type="button" variant="ghost" onClick={onClose}>
             Отмена
           </Button>
-          <Button type="submit">Добавить</Button>
+          <Button type="submit">Отправить приглашение</Button>
         </footer>
       </form>
     </Modal>
@@ -341,7 +343,7 @@ export function ManagersSection() {
                 <span>Продажи</span>
                 <strong>
                   {
-                    orders.filter((order) => order.managerId === selected.id)
+                    orders.filter((order) => order.managerId === selected.id && isOrderFinanciallyRecognized(order))
                       .length
                   }
                 </strong>

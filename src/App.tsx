@@ -5,6 +5,7 @@ import { ToastRegion } from "@/components/ui/Toast";
 import { CrmLayout } from "@/layouts/CrmLayout";
 import { PublicLayout } from "@/layouts/PublicLayout";
 import { analyticsService } from "@/services/AnalyticsService";
+import { hasPendingInvite } from "@/lib/supabase";
 import { useAppStore } from "@/stores/useAppStore";
 
 const HomePage = lazy(() => import("@/pages/public/HomePage"));
@@ -19,6 +20,7 @@ const CheckoutPage = lazy(() => import("@/pages/public/CheckoutPage"));
 const SuccessPage = lazy(() => import("@/pages/public/SuccessPage"));
 const NotFoundPage = lazy(() => import("@/pages/public/NotFoundPage"));
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
+const InvitePage = lazy(() => import("@/pages/auth/InvitePage"));
 const CrmPortal = lazy(() => import("@/pages/crm/CrmPortal"));
 
 function AppEffects() {
@@ -30,6 +32,10 @@ function AppEffects() {
     document.documentElement.lang = language;
   }, [theme, language]);
   useEffect(() => { analyticsService.track("site_visit", { entry: window.location.hash || "#/" }); }, []);
+  useEffect(() => {
+    if (hasPendingInvite() && window.location.hash !== "#/invite")
+      window.location.hash = "#/invite";
+  }, []);
   return null;
 }
 
@@ -61,6 +67,7 @@ export default function App() {
             <Route path="*" element={<NotFoundPage/>}/>
           </Route>
           <Route path="/login" element={<LoginPage/>}/>
+          <Route path="/invite" element={<InvitePage/>}/>
           <Route element={<RouteGuard role="admin"/>}>
             <Route path="/admin" element={<Navigate to="/crm/admin/dashboard" replace/>}/>
             <Route path="/crm/admin" element={<CrmLayout role="admin"/>}>

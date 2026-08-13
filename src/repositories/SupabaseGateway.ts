@@ -67,6 +67,8 @@ const mapLeadStatus = (status: string): LeadStatus => {
     lost: "refused",
     courier_requested: "courier_ordered",
     assembled: "packed",
+    courier_picked_up: "courier_picked_up",
+    courier_in_transit: "courier_in_transit",
     rejected: "refused",
   };
   return map[status] ?? (status as LeadStatus);
@@ -77,7 +79,7 @@ export const toDatabaseLeadStatus = (status: LeadStatus) => {
   if (["paid", "installment", "completed"].includes(status)) return "won";
   if (status === "refused") return "lost";
   if (status === "cancelled") return "cancelled";
-  if (["courier_ordered", "packed", "handed_to_courier", "received"].includes(status))
+  if (["courier_ordered", "packed", "courier_picked_up", "courier_in_transit", "handed_to_courier", "received"].includes(status))
     return "confirmed";
   return status;
 };
@@ -87,6 +89,8 @@ export const toDatabaseOrderStatus = (status: LeadStatus) => {
     working: "in_progress",
     courier_ordered: "courier_requested",
     packed: "assembled",
+    courier_picked_up: "courier_picked_up",
+    courier_in_transit: "courier_in_transit",
     refused: "rejected",
   };
   return map[status] ?? status;
@@ -322,17 +326,27 @@ class SupabaseGateway {
     const email = userData.user?.email;
     if (userError || !email) throw new Error("Не удалось подтвердить текущую сессию");
 
-    const verification = await supabase.auth.signInWithPassword({
+    // Supabase updateUser does not accept a current_password field. Verify the
+    // current password through a fresh password sign-in, then update it only
+    // after that re-authentication succeeds.
+    const verified = await supabase.auth.signInWithPassword({
       email,
       password: currentPassword,
     });
-    if (verification.error) throw new Error("Текущий пароль указан неверно");
+    if (verified.error || verified.data.user?.id !== userData.user?.id)
+      throw new Error("Текущий пароль указан неверно");
 
-    const { error } = await supabase.auth.updateUser({
-      current_password: currentPassword,
-      password: newPassword,
-    });
+    const updated = await supabase.auth.updateUser({ password: newPassword });
+    if (updated.error) throw new Error(updated.error.message);
+  }
+
+  async completeInvite(password: string, name: string, phone: string) {
+    const { error } = await supabase.auth.updateUser({ password });
     if (error) throw new Error(error.message);
+    await this.updateProfile(name, phone);
+    const session = await this.getSessionUser();
+    if (!session) throw new Error("Ссылка приглашения недействительна или устарела");
+    return session;
   }
 
   async load(session: SessionUser | null): Promise<SupabaseSnapshot> {
@@ -564,6 +578,13 @@ class SupabaseGateway {
       updatedAt: row.updated_at,
     }));
     base.orders = staffData.orders.map((row) => {
+      const courierRow = row as OrderRow & {
+        inventory_reserved?: boolean;
+        inventory_processed?: boolean;
+        inventory_returned?: boolean;
+        courier_advance_tyiyn?: number;
+        courier_advance_status?: "not_received" | "pending" | "settled" | "refunded";
+      };
       const items: OrderItem[] = (itemsByOrder.get(row.id) ?? []).map((item) => ({
         id: item.id,
         productId: item.product_id || "",
@@ -595,6 +616,12 @@ class SupabaseGateway {
         } : undefined,
         source: row.sale_channel === "offline" ? "offline" : "online",
         status: mapLeadStatus(row.status),
+        financialProcessed: row.financial_processed,
+        inventoryReserved: courierRow.inventory_reserved ?? false,
+        inventoryProcessed: courierRow.inventory_processed ?? row.financial_processed,
+        inventoryReturned: courierRow.inventory_returned ?? false,
+        courierAdvance: courierRow.courier_advance_tyiyn ?? 0,
+        courierAdvanceStatus: courierRow.courier_advance_status ?? "not_received",
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       };
@@ -620,9 +647,20 @@ class SupabaseGateway {
         purchaseMethod: order?.requested_purchase_method === "installment" ? "installment" : "full",
         source: row.source === "website" ? "site" : row.source as Lead["source"],
         managerId: row.assigned_manager_id || "",
-        status: mapLeadStatus(row.status),
+        status: order ? mapLeadStatus(order.status) : mapLeadStatus(row.status),
         comment: row.message || "",
-        statusHistory: [],
+        statusHistory: order
+          ? staffData.statusHistory
+              .filter((history) => history.order_id === order.id)
+              .map((history) => ({
+                id: history.id,
+                fromStatus: history.old_status ? mapLeadStatus(history.old_status) : undefined,
+                toStatus: mapLeadStatus(history.new_status),
+                changedAt: history.created_at,
+                changedByUserId: history.changed_by || "",
+                comment: history.comment || "",
+              }))
+          : [],
         reassignmentHistory: [],
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -988,6 +1026,19 @@ class SupabaseGateway {
     if (error) throw new Error(error.message);
   }
 
+  async inviteManager(email: string, name: string, phone: string) {
+    const { data, error } = await supabase.functions.invoke("invite-manager", {
+      body: {
+        email,
+        full_name: name,
+        phone,
+        redirect_origin: window.location.origin,
+      },
+    });
+    if (error) throw new Error(error.message || "Не удалось отправить приглашение");
+    if (!data?.ok) throw new Error(data?.error || "Не удалось отправить приглашение");
+  }
+
   async archiveManager(userId: string) {
     const { error } = await supabase.rpc("archive_manager", {
       p_user_id: userId,
@@ -1196,11 +1247,6 @@ class SupabaseGateway {
   }
 
   async changeLeadStatus(leadId: string, status: LeadStatus, comment?: string) {
-    const leadResult = await supabase.from("leads").update({
-      status: toDatabaseLeadStatus(status),
-      message: comment || undefined,
-    }).eq("id", leadId);
-    if (leadResult.error) throw new Error(leadResult.error.message);
     const order = await supabase.from("orders").select("id").eq("lead_id", leadId).maybeSingle();
     if (order.error) throw new Error(order.error.message);
     if (order.data) {
@@ -1210,7 +1256,13 @@ class SupabaseGateway {
         p_comment: comment,
       });
       if (error) throw new Error(error.message);
+      return;
     }
+    const leadResult = await supabase.from("leads").update({
+      status: toDatabaseLeadStatus(status),
+      message: comment || undefined,
+    }).eq("id", leadId);
+    if (leadResult.error) throw new Error(leadResult.error.message);
   }
 
   async createStaffSale(input: {
@@ -1234,6 +1286,15 @@ class SupabaseGateway {
     });
     if (created.error) throw new Error(created.error.message);
     const result = created.data as { order_id: string; order_number: number; total_tyiyn: number };
+    if (input.source === "online") {
+      const queued = await supabase.rpc("set_order_status", {
+        p_order_id: result.order_id,
+        p_new_status: "confirmed",
+        p_comment: "Заказ подтверждён и ожидает курьера",
+      });
+      if (queued.error) throw new Error(queued.error.message);
+      return { number: `ORD-${result.order_number}` };
+    }
     const confirmed = await supabase.rpc("confirm_order_sale", {
       p_order_id: result.order_id,
       p_payment_method: input.paymentMethod,
@@ -1241,6 +1302,12 @@ class SupabaseGateway {
       p_installment_months: input.paymentMethod === "installment" ? 6 : undefined,
     });
     if (confirmed.error) throw new Error(confirmed.error.message);
+    const completed = await supabase.rpc("set_order_status", {
+      p_order_id: result.order_id,
+      p_new_status: "completed",
+      p_comment: "Продажа завершена в магазине",
+    });
+    if (completed.error) throw new Error(completed.error.message);
     return { number: `ORD-${result.order_number}` };
   }
 

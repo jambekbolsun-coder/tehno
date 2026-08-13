@@ -31,7 +31,7 @@ export interface ToastState {
 }
 
 interface ManagerActivationInput {
-  userId: string;
+  email: string;
   name: string;
   phone: string;
 }
@@ -100,6 +100,7 @@ interface AppState extends SupabaseSnapshot {
   updateProfile: (name: string, phone: string) => Promise<void>;
   updateProfileAvatar: (file: File) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  completeInvite: (password: string, name: string, phone: string) => Promise<SessionUser>;
   createSale: (input: StaffSaleInput) => Promise<{ number: string }>;
   showToast: (message: string, kind?: ToastKind) => void;
   clearToast: () => void;
@@ -282,7 +283,10 @@ export const useAppStore = create<AppState>((set, get) => {
     },
     deleteProduct: (productId) => mutate(() => supabaseGateway.deleteProduct(productId), "Товар удалён"),
     adjustStock: (productId, delta, reason) => mutate(() => supabaseGateway.adjustStock(productId, delta, reason), "Остаток обновлён"),
-    addManager: (input) => mutate(() => supabaseGateway.activateManager(input.userId, input.name, input.phone), "Менеджер активирован"),
+    addManager: (input) => mutate(
+      () => supabaseGateway.inviteManager(input.email, input.name, input.phone),
+      "Приглашение отправлено на email",
+    ),
     deleteManager: (managerId) => mutate(() => supabaseGateway.archiveManager(managerId), "Менеджер отключён"),
     addSupplier: (input) => mutate(() => supabaseGateway.addSupplier(input), "Поставщик добавлен"),
     deleteSupplier: (supplierId) => mutate(() => supabaseGateway.archiveSupplier(supplierId), "Поставщик архивирован"),
@@ -336,6 +340,19 @@ export const useAppStore = create<AppState>((set, get) => {
         const message = error instanceof Error ? error.message : "Не удалось изменить пароль";
         toast(message, "error");
         throw error;
+      } finally {
+        set({ loading: false });
+      }
+    },
+    completeInvite: async (password, name, phone) => {
+      set({ loading: true });
+      try {
+        const session = await supabaseGateway.completeInvite(password, name, phone);
+        const data = await supabaseGateway.load(session);
+        set({ ...data, session });
+        stopRealtime?.();
+        stopRealtime = supabaseGateway.subscribe(() => void get().refresh());
+        return session;
       } finally {
         set({ loading: false });
       }
