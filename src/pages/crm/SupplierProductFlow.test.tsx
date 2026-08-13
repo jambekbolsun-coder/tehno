@@ -137,7 +137,7 @@ describe("supplier → delivery → product UI flow", () => {
     ]));
   });
 
-  it("создаёт карточку только из выбранной строки поставки и сохраняет комиссию", async () => {
+  it("создаёт карточку из поставки и сохраняет комиссию с характеристиками", async () => {
     const user = userEvent.setup();
     const saveProduct = vi.fn().mockResolvedValue(undefined);
     useAppStore.setState({
@@ -155,6 +155,9 @@ describe("supplier → delivery → product UI flow", () => {
     await user.type(screen.getByLabelText("Цена продажи, сом *"), "35000");
     await user.clear(screen.getByLabelText("Процент менеджера, % *"));
     await user.type(screen.getByLabelText("Процент менеджера, % *"), "7.5");
+    await user.click(screen.getByRole("button", { name: "Добавить характеристику" }));
+    await user.type(screen.getByLabelText("Характеристика 1 *"), "Мощность");
+    await user.type(screen.getByLabelText("Значение 1 *"), "2000 Вт");
     await user.click(screen.getByRole("button", { name: "Сохранить товар" }));
 
     await waitFor(() => expect(saveProduct).toHaveBeenCalledTimes(1));
@@ -167,6 +170,10 @@ describe("supplier → delivery → product UI flow", () => {
         salePrice: 3_500_000,
         managerRewardType: "percent",
         managerRewardValue: 750,
+        specifications: [expect.objectContaining({
+          label: { ru: "Мощность", kg: "Мощность", en: "Мощность" },
+          value: { ru: "2000 Вт", kg: "2000 Вт", en: "2000 Вт" },
+        })],
       }),
       "delivery-item-test",
     );

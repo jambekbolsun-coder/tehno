@@ -1,4 +1,4 @@
-import { Heart, ShoppingBag, Star } from "lucide-react";
+import { Heart, ShoppingCart, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
@@ -111,7 +111,7 @@ export function ProductCard({ product }: { product: Product }) {
             disabled={available <= 0}
             aria-label={t("addCart")}
           >
-            <ShoppingBag size={18} />
+            <ShoppingCart size={18} />
           </button>
         </div>
       </div>

@@ -3,7 +3,7 @@ import {
   Menu,
   Moon,
   Search,
-  ShoppingBag,
+  ShoppingCart,
   Sun,
   X,
 } from "lucide-react";
@@ -103,7 +103,7 @@ export function Header() {
             aria-label={t("cart")}
             title={t("cart")}
           >
-            <ShoppingBag size={19} />
+            <ShoppingCart size={19} />
             {cart > 0 && <span>{cart}</span>}
           </NavLink>
           <button

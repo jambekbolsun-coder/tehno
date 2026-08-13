@@ -7,7 +7,7 @@ import {
   Minus,
   Plus,
   ShieldCheck,
-  ShoppingBag,
+  ShoppingCart,
   Star,
   Truck,
   ZoomIn,
@@ -16,8 +16,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { InstallmentCalculator } from "@/components/public/InstallmentCalculator";
 import { ProductGrid } from "@/components/public/ProductGrid";
+import { ProductLightbox } from "@/components/public/ProductLightbox";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
 import { useTranslation } from "@/hooks/useTranslation";
 import { analyticsService } from "@/services/AnalyticsService";
 import { useAppStore } from "@/stores/useAppStore";
@@ -46,6 +46,12 @@ export default function ProductPage() {
     if (!product) return;
     addRecent(product.id);
     analyticsService.track("product_view", { slug: product.slug }, product.id);
+  }, [product?.id]);
+
+  useEffect(() => {
+    setSelectedImage(0);
+    setZoomOpen(false);
+    setQuantity(1);
   }, [product?.id]);
 
   const similar = useMemo(
@@ -199,7 +205,7 @@ export default function ProductPage() {
                   <Plus size={17} />
                 </button>
               </div>
-              <Button size="lg" icon={<ShoppingBag size={19} />} onClick={add}>
+              <Button size="lg" icon={<ShoppingCart size={19} />} onClick={add}>
                 {t("addCart")}
               </Button>
             </div>
@@ -304,19 +310,14 @@ export default function ProductPage() {
           <ProductGrid products={recentlyViewed} />
         </section>
       )}
-      <Modal
+      <ProductLightbox
         open={zoomOpen}
-        onClose={() => setZoomOpen(false)}
+        images={product.images.slice(0, 5)}
+        index={selectedImage}
         title={product.name[language]}
-        size="lg"
-      >
-        <div className="zoom-image">
-          <img
-            src={product.images[selectedImage]?.url}
-            alt={product.name[language]}
-          />
-        </div>
-      </Modal>
+        onIndexChange={setSelectedImage}
+        onClose={() => setZoomOpen(false)}
+      />
     </div>
   );
 }

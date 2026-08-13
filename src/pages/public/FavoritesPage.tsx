@@ -1,4 +1,4 @@
-import { Heart, ShoppingBag, Trash2 } from "lucide-react";
+import { Heart, ShoppingCart, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ProductGrid } from "@/components/public/ProductGrid";
 import { Button } from "@/components/ui/Button";
@@ -39,7 +39,7 @@ export default function FavoritesPage() {
           <div>
             <Button
               variant="secondary"
-              icon={<ShoppingBag size={18} />}
+              icon={<ShoppingCart size={18} />}
               onClick={moveAll}
             >
               {t("addAvailableCart")}

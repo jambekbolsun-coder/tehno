@@ -1,4 +1,4 @@
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { InstallmentCalculator } from "@/components/public/InstallmentCalculator";
 import { Button } from "@/components/ui/Button";
@@ -36,7 +36,7 @@ export default function CartPage() {
       </header>
       {!items.length ? (
         <EmptyState
-          icon={<ShoppingBag size={34} />}
+          icon={<ShoppingCart size={34} />}
           title={t("emptyCart")}
           text={t("emptyCartText")}
           action={

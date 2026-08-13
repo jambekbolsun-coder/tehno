@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, ChevronLeft, LockKeyhole, ShoppingBag } from "lucide-react";
+import { Check, ChevronLeft, LockKeyhole, ShoppingCart } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -254,7 +254,7 @@ export default function CheckoutPage() {
               </div>
             ) : (
               <div className="checkout-cart-note">
-                <ShoppingBag size={20} />
+                <ShoppingCart size={20} />
                 <span>{t("fromCartAdded")} {cartItems.length} {t("positions")}</span>
                 <Link to="/cart">{t("change")}</Link>
               </div>
