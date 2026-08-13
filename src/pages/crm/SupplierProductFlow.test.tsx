@@ -104,11 +104,11 @@ describe("supplier → delivery → product UI flow", () => {
     render(<SuppliersSection />);
 
     await user.click(screen.getByRole("button", { name: "Добавить поставщика" }));
-    await user.type(screen.getByLabelText("Название"), "Asia Test");
-    await user.type(screen.getByLabelText("Контактное лицо"), "Азамат");
-    await user.clear(screen.getByLabelText("Телефон"));
-    await user.type(screen.getByLabelText("Телефон"), "+996700123123");
-    await user.type(screen.getByLabelText("Адрес"), "Бишкек");
+    await user.type(screen.getByLabelText("Название *"), "Asia Test");
+    await user.type(screen.getByLabelText("Контактное лицо *"), "Азамат");
+    await user.clear(screen.getByLabelText("Телефон *"));
+    await user.type(screen.getByLabelText("Телефон *"), "+996700123123");
+    await user.type(screen.getByLabelText("Адрес *"), "Бишкек");
     await user.click(screen.getByRole("button", { name: "Добавить модель" }));
 
     const names = screen.getAllByLabelText("Какой товар *");

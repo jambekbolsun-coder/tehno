@@ -273,57 +273,65 @@ function SupplierEditor({
     setDraft((current) => ({ ...current, [key]: value }));
   return (
     <Modal open={open} onClose={onClose} title="Новый поставщик и первая поставка" size="lg" className="supplier-delivery-modal">
-      <form className="crm-form supplier-delivery-form" onSubmit={submit}>
-        <div className="field">
-          <label htmlFor="supplier-name">Название</label>
-          <input
-            id="supplier-name"
-            value={draft.name}
-            onChange={(event) => setField("name", event.target.value)}
-            required
-            autoFocus
-          />
-        </div>
+      <form className="crm-form supplier-delivery-form supplier-editor-form" onSubmit={submit}>
+        <section className="supplier-details-editor" aria-labelledby="supplier-details-title">
+          <header>
+            <h3 id="supplier-details-title">Данные поставщика</h3>
+            <p>Сначала укажите поставщика, затем заполните модели из поставки.</p>
+          </header>
+          <div className="supplier-details-grid">
+            <div className="field">
+              <label htmlFor="supplier-name">Название *</label>
+              <input
+                id="supplier-name"
+                value={draft.name}
+                onChange={(event) => setField("name", event.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="supplier-contact">Контактное лицо *</label>
+              <input
+                id="supplier-contact"
+                value={draft.contactPerson}
+                onChange={(event) => setField("contactPerson", event.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="supplier-phone">Телефон *</label>
+              <input
+                id="supplier-phone"
+                value={draft.phone}
+                onChange={(event) => setField("phone", event.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="supplier-address">Адрес *</label>
+              <input
+                id="supplier-address"
+                value={draft.address}
+                onChange={(event) => setField("address", event.target.value)}
+                required
+              />
+            </div>
+            <div className="field field--wide">
+              <label htmlFor="supplier-notes">Заметки</label>
+              <textarea
+                id="supplier-notes"
+                value={draft.notes}
+                onChange={(event) => setField("notes", event.target.value)}
+                rows={2}
+              />
+            </div>
+          </div>
+        </section>
         <DeliveryLinesEditor lines={lines} onChange={setLines} />
         <p className="form-hint">
           После сохранения модели появятся в разделе «Каталог». Только из этих строк можно создать карточки товаров.
         </p>
-        <div className="field">
-          <label htmlFor="supplier-contact">Контактное лицо</label>
-          <input
-            id="supplier-contact"
-            value={draft.contactPerson}
-            onChange={(event) => setField("contactPerson", event.target.value)}
-            required
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="supplier-phone">Телефон</label>
-          <input
-            id="supplier-phone"
-            value={draft.phone}
-            onChange={(event) => setField("phone", event.target.value)}
-            required
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="supplier-address">Адрес</label>
-          <input
-            id="supplier-address"
-            value={draft.address}
-            onChange={(event) => setField("address", event.target.value)}
-            required
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="supplier-notes">Заметки</label>
-          <textarea
-            id="supplier-notes"
-            value={draft.notes}
-            onChange={(event) => setField("notes", event.target.value)}
-            rows={3}
-          />
-        </div>
         <footer className="modal-form-actions">
           <Button type="button" variant="ghost" onClick={onClose}>
             Отмена
