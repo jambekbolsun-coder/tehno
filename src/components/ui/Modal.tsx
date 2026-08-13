@@ -9,9 +9,10 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   size?: "sm" | "md" | "lg" | "full";
+  className?: string;
 }
 
-export function Modal({ open, title, onClose, children, size = "md" }: ModalProps) {
+export function Modal({ open, title, onClose, children, size = "md", className = "" }: ModalProps) {
   const titleId = useId();
   useBodyLock(open);
   useEffect(() => {
@@ -23,7 +24,7 @@ export function Modal({ open, title, onClose, children, size = "md" }: ModalProp
   if (!open) return null;
   return createPortal(
     <div className="modal-layer" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className={`modal modal--${size}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <section className={`modal modal--${size} ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <header className="modal__header">
           <h2 id={titleId}>{title}</h2>
           <button className="icon-button" onClick={onClose} aria-label="Закрыть окно">

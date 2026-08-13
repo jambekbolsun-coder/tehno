@@ -317,7 +317,11 @@ export const useAppStore = create<AppState>((set, get) => {
       "Поставка добавлена",
       true,
     ),
-    deleteSupplier: (supplierId) => mutate(() => supabaseGateway.archiveSupplier(supplierId), "Поставщик архивирован"),
+    deleteSupplier: (supplierId) => mutate(
+      () => supabaseGateway.archiveSupplier(supplierId),
+      "Поставщик удалён",
+      true,
+    ),
     toggleManagerDistribution: (managerId) => {
       const manager = get().managers.find((item) => item.id === managerId);
       return mutate(() => supabaseGateway.setManagerDistribution(managerId, !manager?.acceptsLeads));

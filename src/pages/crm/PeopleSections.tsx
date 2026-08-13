@@ -272,8 +272,8 @@ function SupplierEditor({
   const setField = (key: keyof typeof draft, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
   return (
-    <Modal open={open} onClose={onClose} title="Новый поставщик и первая поставка" size="lg">
-      <form className="crm-form" onSubmit={submit}>
+    <Modal open={open} onClose={onClose} title="Новый поставщик и первая поставка" size="lg" className="supplier-delivery-modal">
+      <form className="crm-form supplier-delivery-form" onSubmit={submit}>
         <div className="field">
           <label htmlFor="supplier-name">Название</label>
           <input
@@ -368,8 +368,9 @@ function SupplierDeliveryEditor({
       onClose={onClose}
       title={supplier ? `Новая поставка: ${supplier.name}` : "Новая поставка"}
       size="lg"
+      className="supplier-delivery-modal"
     >
-      <form className="crm-form" onSubmit={submit}>
+      <form className="crm-form supplier-delivery-form" onSubmit={submit}>
         <DeliveryLinesEditor lines={lines} onChange={setLines} />
         <div className="field">
           <label htmlFor="delivery-notes">Комментарий к поставке</label>
@@ -800,6 +801,7 @@ export function CustomersSection({ role }: { role: "admin" | "manager" }) {
 
 export function SuppliersSection() {
   const suppliers = useAppStore((state) => state.suppliers);
+  const activeSuppliers = suppliers.filter((supplier) => supplier.isActive);
   const deliveries = useAppStore((state) => state.supplierDeliveries);
   const supplierProducts = useAppStore((state) => state.products);
   const debts = useAppStore((state) => state.supplierDebts);
@@ -849,7 +851,7 @@ export function SuppliersSection() {
         onClose={() => setDeliverySupplier(null)}
       />
       <div className="supplier-grid">
-        {suppliers.map((supplier) => {
+        {activeSuppliers.map((supplier) => {
           const products = supplierProducts.filter(
             (product) => product.supplierId === supplier.id,
           );
@@ -896,7 +898,7 @@ export function SuppliersSection() {
               <footer>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  className="supplier-card__delivery-button"
                   icon={<PackagePlus size={16} />}
                   onClick={() => setDeliverySupplier(supplier)}
                 >
@@ -913,13 +915,23 @@ export function SuppliersSection() {
                 <button onClick={() => setSelected(supplier)}>
                   Подробнее <ChevronRight size={15} />
                 </button>
-                <button className="danger" onClick={() => window.confirm(`Архивировать поставщика ${supplier.name}?`) && void deleteSupplier(supplier.id)} title="Архивировать поставщика">
+                <button
+                  className="danger"
+                  onClick={() => window.confirm(`Удалить поставщика ${supplier.name}? Товары, продажи и финансовая история сохранятся.`) && void deleteSupplier(supplier.id)}
+                  title="Удалить поставщика"
+                  aria-label={`Удалить поставщика ${supplier.name}`}
+                >
                   <Trash2 size={15}/>
                 </button>
               </footer>
             </article>
           );
         })}
+        {!activeSuppliers.length && (
+          <div className="crm-panel supplier-grid__empty">
+            <CrmEmpty title="Поставщиков пока нет" text="Добавьте поставщика вместе с первой поставкой." />
+          </div>
+        )}
       </div>
       <Modal
         open={!!selected}

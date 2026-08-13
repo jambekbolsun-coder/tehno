@@ -692,6 +692,7 @@ class SupabaseGateway {
       paid: staffData.supplierPayments
         .filter((payment) => payment.supplier_id === row.id)
         .reduce((sum, payment) => sum + payment.amount_tyiyn, 0),
+      isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }));

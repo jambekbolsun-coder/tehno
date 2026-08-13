@@ -130,6 +130,7 @@ export interface Supplier extends Entity {
   address: string;
   notes: string;
   paid: Money;
+  isActive: boolean;
 }
 
 export interface SupplierProduct extends Entity {

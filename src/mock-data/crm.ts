@@ -85,6 +85,7 @@ export const mockSuppliers: Supplier[] = [
   address: address as string,
   notes: "Комиссионные товары. Расчёт только за фактически проданные единицы.",
   paid: paid as number,
+  isActive: true,
   createdAt,
   updatedAt,
 }));

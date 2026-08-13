@@ -16,6 +16,7 @@ const supplier: Supplier = {
   address: "Бишкек",
   notes: "",
   paid: 0,
+  isActive: true,
   createdAt: now,
   updatedAt: now,
 };
@@ -169,6 +170,36 @@ describe("supplier → delivery → product UI flow", () => {
       }),
       "delivery-item-test",
     );
+  });
+
+  it("удаляет поставщика из рабочего списка, сохраняя архив вне интерфейса", async () => {
+    const user = userEvent.setup();
+    const deleteSupplier = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    useAppStore.setState({
+      suppliers: [supplier, { ...supplier, id: "supplier-archived", name: "Archived Supply", isActive: false }],
+      deleteSupplier,
+    });
+    render(<SuppliersSection />);
+
+    expect(screen.queryByText("Archived Supply")).not.toBeInTheDocument();
+    const deliveryButton = screen.getByRole("button", { name: "Новая поставка" });
+    expect(deliveryButton).toHaveClass("supplier-card__delivery-button");
+    await user.click(screen.getByRole("button", { name: `Удалить поставщика ${supplier.name}` }));
+
+    expect(deleteSupplier).toHaveBeenCalledWith(supplier.id);
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("финансовая история сохранятся"));
+  });
+
+  it("не разрешает создать новый товар из поставки удалённого поставщика", () => {
+    useAppStore.setState({
+      suppliers: [{ ...supplier, isActive: false }],
+      supplierDeliveries: [delivery],
+    });
+    render(<CatalogSection role="admin" />);
+
+    expect(screen.getByRole("button", { name: "Добавить товар" })).toBeDisabled();
+    expect(screen.getByText(/Ожидают добавления: 0 моделей/)).toBeInTheDocument();
   });
 
   it("удаляет карточку через безопасное удаление", async () => {

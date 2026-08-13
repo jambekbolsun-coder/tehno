@@ -28,10 +28,15 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
   const deliveries = useAppStore((state) => state.supplierDeliveries);
   const save = useAppStore((state) => state.saveProduct);
   const showToast = useAppStore((state) => state.showToast);
-  const unlinkedItems = useMemo(
-    () => deliveries.filter((delivery) => delivery.status === "received").flatMap((delivery) => delivery.items).filter((item) => !item.productId),
-    [deliveries],
-  );
+  const unlinkedItems = useMemo(() => {
+    const activeSupplierIds = new Set(
+      suppliers.filter((supplier) => supplier.isActive).map((supplier) => supplier.id),
+    );
+    return deliveries
+      .filter((delivery) => delivery.status === "received")
+      .flatMap((delivery) => delivery.items)
+      .filter((item) => !item.productId && activeSupplierIds.has(item.supplierId));
+  }, [deliveries, suppliers]);
   const firstItem = unlinkedItems[0];
   const [supplierId, setSupplierId] = useState(product?.supplierId ?? firstItem?.supplierId ?? "");
   const [deliveryItemId, setDeliveryItemId] = useState(product ? "" : firstItem?.id ?? "");
@@ -41,7 +46,7 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
   const [imageUrls, setImageUrls] = useState((product?.images ?? []).map((item) => item.url).join("\n"));
   const isNew = !product;
   const supplierItems = unlinkedItems.filter((item) => item.supplierId === supplierId);
-  const availableSuppliers = suppliers.filter((supplier) => unlinkedItems.some((item) => item.supplierId === supplier.id));
+  const availableSuppliers = suppliers.filter((supplier) => supplier.isActive && unlinkedItems.some((item) => item.supplierId === supplier.id));
 
   useEffect(() => {
     if (!isNew) return;
@@ -171,10 +176,13 @@ export function CatalogSection({ role }: { role: "admin" | "manager" }) {
   const [query, setQuery] = useState("");
   const [stockFilter, setStockFilter] = useState("all");
   const [editing, setEditing] = useState<Product | null | "new">(null);
+  const activeSupplierIds = new Set(
+    suppliers.filter((supplier) => supplier.isActive).map((supplier) => supplier.id),
+  );
   const pendingDeliveryItems = supplierDeliveries
     .filter((delivery) => delivery.status === "received")
     .flatMap((delivery) => delivery.items)
-    .filter((item) => !item.productId);
+    .filter((item) => !item.productId && activeSupplierIds.has(item.supplierId));
   const visible = useMemo(() => {
     const q = query.toLowerCase();
     return products.filter((product) => {
