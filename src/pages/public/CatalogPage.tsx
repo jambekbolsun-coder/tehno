@@ -313,6 +313,23 @@ export default function CatalogPage() {
           </select>
         </label>
       </div>
+      <nav className="catalog-category-rail" aria-label={t("categories")}>
+        <button
+          className={category === "all" ? "active" : ""}
+          onClick={() => setCategory("all")}
+        >
+          {t("allProducts")}
+        </button>
+        {categories.filter((item) => item.isVisible).map((item) => (
+          <button
+            key={item.id}
+            className={category === item.id ? "active" : ""}
+            onClick={() => setCategory(item.id)}
+          >
+            {item.name[language]}
+          </button>
+        ))}
+      </nav>
       <div className="catalog-layout">
         <aside className="catalog-sidebar">
           <FilterContent />

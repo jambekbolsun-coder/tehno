@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CatalogSection } from "@/pages/crm/CatalogSections";
@@ -51,6 +51,31 @@ const delivery: SupplierDelivery = {
   }],
   createdAt: now,
   updatedAt: now,
+};
+const secondSupplier: Supplier = {
+  ...supplier,
+  id: "supplier-mega",
+  name: "Mega Import",
+  contactPerson: "Айбек",
+  phone: "+996 555 111 222",
+};
+const secondDelivery: SupplierDelivery = {
+  ...delivery,
+  id: "delivery-mega",
+  number: "SUP-2",
+  supplierId: secondSupplier.id,
+  totalQuantity: 3,
+  items: [{
+    ...delivery.items[0],
+    id: "delivery-item-mega",
+    deliveryId: "delivery-mega",
+    supplierId: secondSupplier.id,
+    productName: "Стиральная машина",
+    brand: "LG",
+    model: "F2J3",
+    quantity: 3,
+    purchasePrice: 3_400_000,
+  }],
 };
 const product: Product = {
   id: "product-test",
@@ -137,7 +162,7 @@ describe("supplier → delivery → product UI flow", () => {
     ]));
   });
 
-  it("создаёт карточку из поставки и сохраняет комиссию с характеристиками", async () => {
+  it("создаёт карточку из поставки и сохраняет комиссию с одной характеристикой", async () => {
     const user = userEvent.setup();
     const saveProduct = vi.fn().mockResolvedValue(undefined);
     useAppStore.setState({
@@ -155,9 +180,7 @@ describe("supplier → delivery → product UI flow", () => {
     await user.type(screen.getByLabelText("Цена продажи, сом *"), "35000");
     await user.clear(screen.getByLabelText("Процент менеджера, % *"));
     await user.type(screen.getByLabelText("Процент менеджера, % *"), "7.5");
-    await user.click(screen.getByRole("button", { name: "Добавить характеристику" }));
-    await user.type(screen.getByLabelText("Характеристика 1 *"), "Мощность");
-    await user.type(screen.getByLabelText("Значение 1 *"), "2000 Вт");
+    await user.type(screen.getByLabelText("Характеристика"), "Мощность: 2000 Вт\nОбъём: 4 л");
     await user.click(screen.getByRole("button", { name: "Сохранить товар" }));
 
     await waitFor(() => expect(saveProduct).toHaveBeenCalledTimes(1));
@@ -170,13 +193,36 @@ describe("supplier → delivery → product UI flow", () => {
         salePrice: 3_500_000,
         managerRewardType: "percent",
         managerRewardValue: 750,
-        specifications: [expect.objectContaining({
-          label: { ru: "Мощность", kg: "Мощность", en: "Мощность" },
-          value: { ru: "2000 Вт", kg: "2000 Вт", en: "2000 Вт" },
-        })],
+        description: {
+          ru: "Мощность: 2000 Вт\nОбъём: 4 л",
+          kg: "Мощность: 2000 Вт\nОбъём: 4 л",
+          en: "Мощность: 2000 Вт\nОбъём: 4 л",
+        },
+        specifications: [],
       }),
       "delivery-item-test",
     );
+  });
+
+  it("ищет поставщика и модель по части названия", async () => {
+    const user = userEvent.setup();
+    useAppStore.setState({
+      suppliers: [supplier, secondSupplier],
+      supplierDeliveries: [delivery, secondDelivery],
+    });
+    render(<CatalogSection role="admin" />);
+
+    await user.click(screen.getByRole("button", { name: "Добавить товар" }));
+    await user.type(screen.getByLabelText("Поиск поставщика"), "mega");
+    const supplierSelect = screen.getByLabelText("Поставщик *");
+    expect(within(supplierSelect).getByRole("option", { name: "Mega Import" })).toBeInTheDocument();
+    await user.selectOptions(supplierSelect, secondSupplier.id);
+
+    await user.type(screen.getByLabelText("Поиск товара или модели"), "f2j");
+    const modelSelect = screen.getByLabelText("Модель из поставки *");
+    expect(within(modelSelect).getByRole("option", { name: /Стиральная машина · LG F2J3/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Модель *")).toHaveValue("F2J3");
+    expect(screen.getByLabelText("Количество по поставке")).toHaveValue("3");
   });
 
   it("удаляет поставщика из рабочего списка, сохраняя архив вне интерфейса", async () => {

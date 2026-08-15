@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { CrmEmpty, CrmPageHeader, CrmSearch, StatusBadge } from "@/components/crm/CrmUI";
 import { useAppStore } from "@/stores/useAppStore";
-import type { Product, ProductSpecification } from "@/types/domain";
+import type { Product } from "@/types/domain";
 import { formatDateTime, nowIso } from "@/utils/date";
 import { createId } from "@/utils/id";
 import { calculateInstallment, formatMoney, toMinor } from "@/utils/money";
@@ -21,92 +21,6 @@ const emptyProduct = (categoryId = "", supplierId = ""): Product => {
     source: "supplier", arrivalDate: now, createdAt: now, updatedAt: now,
   };
 };
-
-function ProductSpecificationsEditor({
-  specifications,
-  onChange,
-}: {
-  specifications: ProductSpecification[];
-  onChange: (specifications: ProductSpecification[]) => void;
-}) {
-  const addSpecification = () =>
-    onChange([
-      ...specifications,
-      {
-        id: createId("specification"),
-        label: { ru: "", kg: "", en: "" },
-        value: { ru: "", kg: "", en: "" },
-      },
-    ]);
-  const updateSpecification = (
-    id: string,
-    field: "label" | "value",
-    value: string,
-  ) =>
-    onChange(
-      specifications.map((specification) =>
-        specification.id === id
-          ? {
-              ...specification,
-              [field]: { ...specification[field], ru: value },
-            }
-          : specification,
-      ),
-    );
-  const removeSpecification = (id: string) =>
-    onChange(specifications.filter((specification) => specification.id !== id));
-
-  return (
-    <section className="product-specifications-editor" aria-labelledby="product-specifications-title">
-      <header>
-        <div>
-          <h3 id="product-specifications-title">Характеристики товара</h3>
-          <p>Добавьте отдельные параметры: мощность, объём, размеры, цвет и другие данные.</p>
-        </div>
-        <Button type="button" variant="secondary" icon={<Plus size={16}/>} onClick={addSpecification}>
-          Добавить характеристику
-        </Button>
-      </header>
-      {specifications.length ? (
-        <div className="product-specifications-list">
-          {specifications.map((specification, index) => (
-            <div className="product-specification-row" key={specification.id}>
-              <div className="field">
-                <label htmlFor={`product-specification-label-${specification.id}`}>Характеристика {index + 1} *</label>
-                <input
-                  id={`product-specification-label-${specification.id}`}
-                  value={specification.label.ru}
-                  onChange={(event) => updateSpecification(specification.id, "label", event.target.value)}
-                  placeholder="Например: Мощность"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor={`product-specification-value-${specification.id}`}>Значение {index + 1} *</label>
-                <input
-                  id={`product-specification-value-${specification.id}`}
-                  value={specification.value.ru}
-                  onChange={(event) => updateSpecification(specification.id, "value", event.target.value)}
-                  placeholder="Например: 2000 Вт"
-                />
-              </div>
-              <button
-                type="button"
-                className="product-specification-row__remove"
-                onClick={() => removeSpecification(specification.id)}
-                aria-label={`Удалить характеристику ${index + 1}`}
-                title="Удалить характеристику"
-              >
-                <Trash2 size={17}/>
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="product-specifications-empty">Характеристики пока не добавлены.</p>
-      )}
-    </section>
-  );
-}
 
 function ProductEditor({ product, open, onClose }: { product: Product | null; open: boolean; onClose: () => void }) {
   const categories = useAppStore((state) => state.categories);
@@ -126,6 +40,8 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
   const firstItem = unlinkedItems[0];
   const [supplierId, setSupplierId] = useState(product?.supplierId ?? firstItem?.supplierId ?? "");
   const [deliveryItemId, setDeliveryItemId] = useState(product ? "" : firstItem?.id ?? "");
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [itemSearch, setItemSearch] = useState("");
   const [draft, setDraft] = useState<Product>(
     product ? structuredClone(product) : emptyProduct(categories[0]?.id, firstItem?.supplierId ?? ""),
   );
@@ -133,6 +49,22 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
   const isNew = !product;
   const supplierItems = unlinkedItems.filter((item) => item.supplierId === supplierId);
   const availableSuppliers = suppliers.filter((supplier) => supplier.isActive && unlinkedItems.some((item) => item.supplierId === supplier.id));
+  const normalizedSupplierSearch = supplierSearch.trim().toLowerCase();
+  const normalizedItemSearch = itemSearch.trim().toLowerCase();
+  const filteredSuppliers = availableSuppliers.filter((supplier) =>
+    supplier.id === supplierId ||
+    !normalizedSupplierSearch ||
+    [supplier.name, supplier.contactPerson, supplier.phone].some((value) =>
+      value.toLowerCase().includes(normalizedSupplierSearch),
+    ),
+  );
+  const filteredSupplierItems = supplierItems.filter((item) =>
+    item.id === deliveryItemId ||
+    !normalizedItemSearch ||
+    [item.productName, item.brand, item.model].some((value) =>
+      value.toLowerCase().includes(normalizedItemSearch),
+    ),
+  );
 
   useEffect(() => {
     if (!isNew) return;
@@ -154,6 +86,7 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
     setSupplierId(nextSupplierId);
     const first = unlinkedItems.find((item) => item.supplierId === nextSupplierId);
     setDeliveryItemId(first?.id ?? "");
+    setItemSearch("");
   };
   const addImageFiles = (files: FileList | null) => {
     if (!files) return;
@@ -179,38 +112,12 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
       return showToast("Заполните название, бренд, модель, категорию и цену", "error");
     if (draft.managerRewardValue < 0 || (draft.managerRewardType === "percent" && draft.managerRewardValue > 10_000))
       return showToast("Проверьте комиссию менеджера: процент должен быть от 0 до 100", "error");
-    const hasIncompleteSpecification = draft.specifications.some((specification) => {
-      const hasLabel = Boolean(specification.label.ru.trim());
-      const hasValue = Boolean(specification.value.ru.trim());
-      return hasLabel !== hasValue;
-    });
-    if (hasIncompleteSpecification)
-      return showToast("У каждой характеристики заполните название и значение", "error");
-    const specifications = draft.specifications
-      .filter((specification) => specification.label.ru.trim() && specification.value.ru.trim())
-      .map((specification) => {
-        const label = specification.label.ru.trim();
-        const value = specification.value.ru.trim();
-        return {
-          ...specification,
-          label: {
-            ru: label,
-            kg: specification.label.kg.trim() || label,
-            en: specification.label.en.trim() || label,
-          },
-          value: {
-            ru: value,
-            kg: specification.value.kg.trim() || value,
-            en: specification.value.en.trim() || value,
-          },
-        };
-      });
     const next = {
       ...draft,
       slug: draft.slug || `${draft.brand}-${draft.model}-${Date.now().toString().slice(-5)}`.toLowerCase().replace(/[^a-z0-9а-яё]+/gi, "-"),
       name: { ru: draft.name.ru, kg: draft.name.kg || draft.name.ru, en: draft.name.en || draft.name.ru },
       description: { ru: draft.description.ru, kg: draft.description.kg || draft.description.ru, en: draft.description.en || draft.description.ru },
-      specifications,
+      specifications: [],
       images: urls.map((url, index) => ({
         id: `${draft.id}-image-${index + 1}`,
         url,
@@ -239,16 +146,44 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
             {unlinkedItems.length ? (
               <div className="form-grid">
                 <div className="field">
+                  <label htmlFor="product-source-supplier-search">Поиск поставщика</label>
+                  <div className="product-source-search">
+                    <Search size={16}/>
+                    <input
+                      id="product-source-supplier-search"
+                      value={supplierSearch}
+                      onChange={(event) => setSupplierSearch(event.target.value)}
+                      placeholder="Введите название, контакт или телефон"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <small>Доступно поставщиков: {filteredSuppliers.length}</small>
+                </div>
+                <div className="field">
+                  <label htmlFor="product-source-model-search">Поиск товара или модели</label>
+                  <div className="product-source-search">
+                    <Search size={16}/>
+                    <input
+                      id="product-source-model-search"
+                      value={itemSearch}
+                      onChange={(event) => setItemSearch(event.target.value)}
+                      placeholder="Название, бренд или модель"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <small>Найдено моделей: {filteredSupplierItems.length}</small>
+                </div>
+                <div className="field">
                   <label htmlFor="product-source-supplier">Поставщик *</label>
                   <select id="product-source-supplier" value={supplierId} onChange={(event) => chooseSupplier(event.target.value)} required>
-                    {availableSuppliers.map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.name}</option>)}
+                    {filteredSuppliers.map((supplier) => <option value={supplier.id} key={supplier.id}>{supplier.name}</option>)}
                   </select>
                 </div>
                 <div className="field">
                   <label htmlFor="product-source-model">Модель из поставки *</label>
                   <select id="product-source-model" value={deliveryItemId} onChange={(event) => setDeliveryItemId(event.target.value)} required>
-                    {supplierItems.map((item) => (
-                      <option value={item.id} key={item.id}>{item.brand} {item.model} · {item.quantity} шт.</option>
+                    {filteredSupplierItems.map((item) => (
+                      <option value={item.id} key={item.id}>{item.productName} · {item.brand} {item.model} · {item.quantity} шт.</option>
                     ))}
                   </select>
                 </div>
@@ -270,13 +205,9 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
           <div className="field"><label htmlFor="product-manager-reward">{draft.managerRewardType === "percent" ? "Процент менеджера, % *" : "Менеджеру за 1 шт., сом *"}</label><input id="product-manager-reward" type="number" min="0" max={draft.managerRewardType === "percent" ? 100 : undefined} step="0.01" value={draft.managerRewardValue / 100 || ""} onChange={(event) => setDraft((current) => ({ ...current, managerRewardValue: event.target.value ? toMinor(Number(event.target.value)) : 0 }))} required/></div>
           <div className="field"><label htmlFor="product-minimum-stock">Минимальный остаток</label><input id="product-minimum-stock" type="number" min="0" value={draft.minimumStock} onChange={(event) => setDraft((current) => ({ ...current, minimumStock: Number(event.target.value) }))}/></div>
           <div className="field"><label htmlFor="product-warranty">Гарантия, месяцев</label><input id="product-warranty" type="number" min="0" value={draft.warrantyMonths} onChange={(event) => setDraft((current) => ({ ...current, warrantyMonths: Number(event.target.value) }))}/></div>
-          <div className="field field--wide"><label htmlFor="product-description">Описание</label><textarea id="product-description" rows={4} value={draft.description.ru} onChange={(event) => setDraft((current) => ({ ...current, description: { ...current.description, ru: event.target.value } }))}/></div>
+          <div className="field field--wide"><label htmlFor="product-description">Характеристика</label><textarea id="product-description" rows={7} value={draft.description.ru} onChange={(event) => setDraft((current) => ({ ...current, description: { ...current.description, ru: event.target.value } }))} placeholder="Опишите основные параметры, возможности, размеры, мощность и другие характеристики товара"/></div>
           <div className="field field--wide"><label htmlFor="product-images"><ImagePlus size={16}/>Фотографии (макс. 5)</label><input id="product-images" type="file" accept="image/*" multiple onChange={(event) => addImageFiles(event.target.files)}/><textarea aria-label="Внешние URL фотографий" rows={4} value={imageUrls} onChange={(event) => setImageUrls(event.target.value)} placeholder="Также можно вставить внешние URL, каждый с новой строки"/><small>{imageUrls.split(/\r?\n/).filter((value) => value.trim()).length}/5 изображений · файлы загружаются в Supabase Storage</small></div>
         </div>
-        <ProductSpecificationsEditor
-          specifications={draft.specifications}
-          onChange={(specifications) => setDraft((current) => ({ ...current, specifications }))}
-        />
         <div className="form-check-grid"><label><input type="checkbox" checked={draft.isVisible} onChange={(event) => setDraft((current) => ({ ...current, isVisible: event.target.checked }))}/>Показывать на сайте</label><label><input type="checkbox" checked={draft.isFeatured} onChange={(event) => setDraft((current) => ({ ...current, isFeatured: event.target.checked }))}/>Добавить в рекомендации</label><label><input type="checkbox" checked={draft.installmentEligible} onChange={(event) => setDraft((current) => ({ ...current, installmentEligible: event.target.checked }))}/>Доступна рассрочка</label></div>
         <footer className="modal-form-actions"><Button type="button" variant="ghost" onClick={onClose}>Отмена</Button><Button type="submit" disabled={isNew && !deliveryItemId}>Сохранить товар</Button></footer>
       </form>

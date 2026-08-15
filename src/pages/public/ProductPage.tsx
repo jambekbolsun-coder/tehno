@@ -10,13 +10,13 @@ import {
   ShoppingCart,
   Star,
   Truck,
-  ZoomIn,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { InstallmentCalculator } from "@/components/public/InstallmentCalculator";
 import { ProductGrid } from "@/components/public/ProductGrid";
 import { ProductLightbox } from "@/components/public/ProductLightbox";
+import { ProductSwipeGallery } from "@/components/public/ProductSwipeGallery";
 import { Button } from "@/components/ui/Button";
 import { useTranslation } from "@/hooks/useTranslation";
 import { analyticsService } from "@/services/AnalyticsService";
@@ -30,7 +30,6 @@ export default function ProductPage() {
   const navigate = useNavigate();
   const { language, t } = useTranslation();
   const products = useAppStore((state) => state.products);
-  const categories = useAppStore((state) => state.categories);
   const favorites = useAppStore((state) => state.favorites);
   const toggleFavorite = useAppStore((state) => state.toggleFavorite);
   const addToCart = useAppStore((state) => state.addToCart);
@@ -83,7 +82,6 @@ export default function ProductPage() {
       </div>
     );
 
-  const category = categories.find((item) => item.id === product.categoryId);
   const available = product.stock - product.reserved;
   const activePromotion =
     product.promotion?.isActive &&
@@ -110,33 +108,13 @@ export default function ProductPage() {
         <span>{product.name[language]}</span>
       </nav>
       <div className="product-detail-grid">
-        <section className="product-gallery" aria-label={t("gallery")}>
-          <div className="product-gallery__thumbs">
-            {product.images.slice(0, 5).map((item, index) => (
-              <button
-                key={item.id}
-                className={selectedImage === index ? "active" : ""}
-                onClick={() => setSelectedImage(index)}
-              >
-                <img src={item.url} alt={item.alt[language]} />
-              </button>
-            ))}
-          </div>
-          <button
-            className="product-gallery__main"
-            onClick={() => setZoomOpen(true)}
-            aria-label={t("zoomImage")}
-          >
-            <img
-              src={product.images[selectedImage]?.url}
-              alt={product.name[language]}
-            />
-            <span>
-              <ZoomIn size={18} />
-              {t("zoom")}
-            </span>
-          </button>
-        </section>
+        <ProductSwipeGallery
+          images={product.images.slice(0, 5)}
+          index={selectedImage}
+          title={product.name[language]}
+          onIndexChange={setSelectedImage}
+          onOpen={() => setZoomOpen(true)}
+        />
         <section className="product-info">
           <div className="product-info__top">
             <div>
@@ -281,17 +259,6 @@ export default function ProductPage() {
           <div>
             <h2>{t("description")}</h2>
             <p>{product.description[language]}</p>
-          </div>
-          <div>
-            <h2>{t("specifications")}</h2>
-            <dl>
-              {product.specifications.map((item) => (
-                <div key={item.id}>
-                  <dt>{item.label[language]}</dt>
-                  <dd>{item.value[language]}</dd>
-                </div>
-              ))}
-            </dl>
           </div>
         </section>
         {product.installmentEligible && (

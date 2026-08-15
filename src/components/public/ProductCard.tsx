@@ -67,7 +67,7 @@ export function ProductCard({ product }: { product: Product }) {
           aria-label={product.name[language]}
         >
           <img
-            src={product.images[0]?.url}
+            src={product.images[0]?.url || "/logo.jpg"}
             alt={product.name[language]}
             loading="lazy"
             width="450"

@@ -6,5 +6,6 @@ import "@/styles/base.css";
 import "@/styles/public.css";
 import "@/styles/crm.css";
 import "@/styles/responsive.css";
+import "@/styles/buyer-market.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App/></StrictMode>);
