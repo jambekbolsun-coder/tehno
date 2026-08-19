@@ -1,69 +1,15 @@
-import {
-  AirVent,
-  ArrowRight,
-  BadgePercent,
-  ChefHat,
-  CircleCheck,
-  HeartPulse,
-  MapPin,
-  Refrigerator,
-  ShieldCheck,
-  Sparkles,
-  Star,
-  Truck,
-  Tv,
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import type { SyntheticEvent } from "react";
-import { FAQBlock } from "@/components/public/FAQBlock";
 import { ProductGrid } from "@/components/public/ProductGrid";
-import { QuickLeadForm } from "@/components/public/QuickLeadForm";
-import { Button } from "@/components/ui/Button";
-import { SectionHeading } from "@/components/ui/SectionHeading";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
-import { buildWhatsAppUrl } from "@/utils/whatsapp";
 
-const categoryIcons = {
-  ChefHat,
-  Sparkles,
-  AirVent,
-  Refrigerator,
-  Tv,
-  HeartPulse,
-};
-
-const fallbackHeroImages = {
-  main: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=1200&q=88",
-  cleaning: "https://images.unsplash.com/photo-1558317374-067fb5f30001?auto=format&fit=crop&w=700&q=88",
-  washer: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?auto=format&fit=crop&w=700&q=88",
-};
-
-const fallbackHeroNames = {
-  ru: {
-    main: "Современная техника для дома",
-    cleaning: "Умная уборка",
-    washer: "Надёжная техника с гарантией",
-  },
-  kg: {
-    main: "Үй үчүн заманбап техника",
-    cleaning: "Акылдуу тазалоо",
-    washer: "Кепилдик менен ишенимдүү техника",
-  },
-  en: {
-    main: "Modern home appliances",
-    cleaning: "Smart cleaning",
-    washer: "Reliable appliances with warranty",
-  },
-};
-
-function useFallbackImage(
-  event: SyntheticEvent<HTMLImageElement>,
-  fallback: string,
-) {
-  if (event.currentTarget.src === fallback) return;
-  event.currentTarget.src = fallback;
-}
+const banners = [
+  { src: "/market-banner-sale.jpg", href: "/catalog", label: "Супер скидки на технику" },
+  { src: "/market-banner-installment.jpg", href: "/catalog", label: "Рассрочка на технику" },
+  { src: "/market-banner-delivery.jpg", href: "/catalog", label: "Доставка техники" },
+];
 
 export default function HomePage() {
   const { language, t } = useTranslation();
@@ -73,314 +19,128 @@ export default function HomePage() {
   const categories = useAppStore((state) => state.categories).filter(
     (category) => category.isVisible,
   );
-  const recommended = [...products]
-    .sort(
-      (a, b) =>
-        Number(b.isFeatured) - Number(a.isFeatured) || b.views - a.views,
-    )
-    .slice(0, 9);
-  const popular = [...products].sort((a, b) => b.views - a.views).slice(0, 5);
-  const heroProducts = products.slice(0, 3);
-  const heroMain = heroProducts[0];
-  const heroBottom = heroProducts[1];
-  const heroCleaning = heroProducts[2];
+  const [activeBanner, setActiveBanner] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setActiveBanner((value) => (value + 1) % banners.length),
+      4200,
+    );
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const featured = useMemo(
+    () =>
+      [...products]
+        .sort(
+          (a, b) =>
+            Number(b.isFeatured) - Number(a.isFeatured) ||
+            Number(b.isPopular) - Number(a.isPopular) ||
+            b.views - a.views,
+        )
+        .slice(0, 4),
+    [products],
+  );
+
+  const catalog = useMemo(
+    () =>
+      [...products]
+        .sort(
+          (a, b) =>
+            Number(b.isPopular) - Number(a.isPopular) ||
+            Number(b.isFeatured) - Number(a.isFeatured) ||
+            b.views - a.views,
+        )
+        .slice(0, 10),
+    [products],
+  );
+
   return (
-    <>
-      <section className="hero-section">
-        <div className="container hero-grid">
-          <div className="hero-copy">
-            <span className="hero-eyebrow">
-              <span />
-              <b>{t("heroEyebrow")}</b>
-            </span>
-            <h1>{t("heroTitle")}</h1>
-            <p>{t("heroText")}</p>
-            <div className="hero-actions">
-              <Link to="/catalog">
-                <Button size="lg" icon={<ArrowRight size={19} />}>
-                  {t("goCatalog")}
-                </Button>
-              </Link>
-              <a href="#recommendations">
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  icon={<BadgePercent size={19} />}
-                >
-                  {t("seePromotions")}
-                </Button>
-              </a>
-            </div>
-            <div className="hero-proof">
-              <div>
-                <strong>4.9</strong>
-                <span>
-                  <span>
-                    <Star size={14} fill="currentColor" />
-                    <Star size={14} fill="currentColor" />
-                    <Star size={14} fill="currentColor" />
-                    <Star size={14} fill="currentColor" />
-                    <Star size={14} fill="currentColor" />
-                  </span>
-                  {t("customerChoice")}
-                </span>
-              </div>
-              <div>
-                <strong>500+</strong>
-                <span>{t("catalogModels")}</span>
-              </div>
-            </div>
-          </div>
-          <div className="hero-visual" aria-label={t("storeImageAlt")}>
-            <div className="hero-visual__glow" />
-            <div className="hero-product hero-product--main">
-              <span className="hero-product__tag">{t("weekHit")}</span>
-              <img
-                src={heroMain?.images[0]?.url || fallbackHeroImages.main}
-                alt={heroMain?.name[language] || fallbackHeroNames[language].main}
-                fetchPriority="high"
-                onError={(event) => useFallbackImage(event, fallbackHeroImages.main)}
-              />
-              <div>
-                <span>{heroMain?.brand || "TEHNO CENTER 2"}</span>
-                <strong>{heroMain?.name[language] || fallbackHeroNames[language].main}</strong>
-              </div>
-            </div>
-            <div className="hero-product hero-product--top">
-              <img
-                src={heroCleaning?.images[0]?.url || fallbackHeroImages.cleaning}
-                alt={heroCleaning?.name[language] || fallbackHeroNames[language].cleaning}
-                onError={(event) => useFallbackImage(event, fallbackHeroImages.cleaning)}
-              />
-              <span>{t("smartCleaning")}</span>
-            </div>
-            <div className="hero-product hero-product--bottom">
-              <img
-                src={heroBottom?.images[0]?.url || fallbackHeroImages.washer}
-                alt={heroBottom?.name[language] || fallbackHeroNames[language].washer}
-                onError={(event) => useFallbackImage(event, fallbackHeroImages.washer)}
-              />
-              <span>{t("warranty12Short")}</span>
-            </div>
-            <span className="hero-floating-badge">
-              <CircleCheck size={18} />
-              {t("verified")}
-            </span>
-          </div>
-        </div>
-        <div className="container trust-strip">
-          <div>
-            <span>
-              <Truck size={21} />
-            </span>
-            <div>
-              <strong>{t("delivery")}</strong>
-              <small>{t("deliveryText")}</small>
-            </div>
-          </div>
-          <div>
-            <span>
-              <ShieldCheck size={21} />
-            </span>
-            <div>
-              <strong>{t("warranty")}</strong>
-              <small>{t("warrantyText")}</small>
-            </div>
-          </div>
-          <div>
-            <span>
-              <BadgePercent size={21} />
-            </span>
-            <div>
-              <strong>{t("installment")}</strong>
-              <small>{t("installmentText")}</small>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section container" id="recommendations">
-        <SectionHeading
-          eyebrow="TEHNO CHOICE"
-          title={t("recommendations")}
-          text={t("recommendationsText")}
-          action={
-            <Link to="/catalog" className="text-link">
-              {t("allProducts")}
-              <ArrowRight size={17} />
+    <div className="market-home container page-space">
+      <section className="market-banner-carousel" aria-label="Акции">
+        <div className="market-banner-track">
+          {banners.map((banner, index) => (
+            <Link
+              key={banner.src}
+              to={banner.href}
+              className={`market-banner${index === activeBanner ? " is-active" : ""}`}
+              aria-hidden={index !== activeBanner}
+              tabIndex={index === activeBanner ? 0 : -1}
+            >
+              <img src={banner.src} alt={banner.label} />
             </Link>
-          }
-        />
-        <ProductGrid products={recommended} />
-        <div className="section-center-action">
-          <Link to="/catalog">
-            <Button size="lg" variant="dark" icon={<ArrowRight size={19} />}>
-              {t("allProducts")}
-            </Button>
-          </Link>
+          ))}
+        </div>
+        <div className="market-banner-dots" aria-label="Переключить баннер">
+          {banners.map((banner, index) => (
+            <button
+              type="button"
+              key={banner.src}
+              className={index === activeBanner ? "is-active" : ""}
+              aria-label={`Баннер ${index + 1}`}
+              onClick={() => setActiveBanner(index)}
+            />
+          ))}
         </div>
       </section>
 
-      <section className="section section--soft">
-        <div className="container">
-          <SectionHeading title={t("categories")} text={t("categoriesText")} />
-          <div className="category-grid">
-            {categories.map((category, index) => {
-              const Icon =
-                categoryIcons[category.icon as keyof typeof categoryIcons] ??
-                Sparkles;
+      {featured.length > 0 && (
+        <section className="market-featured-panel">
+          <div className="market-section-heading market-section-heading--inverse">
+            <div>
+              <span>TEHNO CHOICE</span>
+              <h1>Подборка топ электроники</h1>
+            </div>
+            <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
+          </div>
+          <ProductGrid products={featured} />
+        </section>
+      )}
+
+      {categories.length > 0 && (
+        <section className="market-category-block">
+          <div className="market-section-heading">
+            <h2>{t("catalog")}</h2>
+            <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
+          </div>
+          <div className="market-category-rail">
+            {categories.map((category) => {
+              const preview = products.find((product) => product.categoryId === category.id);
               return (
-                <Link
-                  to={`/catalog?category=${category.id}`}
-                  className={`category-tile category-tile--${index + 1}`}
-                  key={category.id}
-                >
-                  <span>
-                    <Icon size={28} />
+                <Link to={`/catalog?category=${category.id}`} key={category.id}>
+                  <span className="market-category-image">
+                    <img
+                      src={preview?.images[0]?.url || "/logo.jpg"}
+                      alt={category.name[language]}
+                      loading="lazy"
+                    />
                   </span>
                   <strong>{category.name[language]}</strong>
-                  <small>
-                    {
-                      products.filter(
-                        (product) => product.categoryId === category.id,
-                      ).length
-                    }{" "}
-                    {t("productsUnit")}
-                  </small>
-                  <ArrowRight size={18} />
                 </Link>
               );
             })}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className="section container">
-        <SectionHeading
-          title={t("popular")}
-          text={t("popularText")}
-        />
-        <ProductGrid products={popular} />
-      </section>
-
-      <section className="section why-section">
-        <div className="container why-grid">
-          <div className="why-copy">
-            <span className="eyebrow">TEHNO CARE</span>
-            <h2>{t("whyUs")}</h2>
-            <p>{t("servicePrinciple")}</p>
-            <a
-              href={buildWhatsAppUrl("+996 999 230 105")}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Button variant="secondary" size="lg">
-                {t("whatsapp")}
-              </Button>
-            </a>
-          </div>
-          <div className="why-cards">
-            <article>
-              <span>01</span>
-              <h3>{t("why1")}</h3>
-              <p>{t("why1Text")}</p>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>{t("why2")}</h3>
-              <p>{t("why2Text")}</p>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>{t("why3")}</h3>
-              <p>{t("why3Text")}</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="section container store-visit">
-        <div className="store-visit__visual">
-          <img
-            src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=1200&q=84"
-            alt={t("storeImageAlt")}
-            loading="lazy"
-          />
-          <span>
-            <MapPin size={18} />
-            {t("bishkekAddressShort")}
-          </span>
-        </div>
-        <div className="store-visit__copy">
-          <span className="eyebrow">OFFLINE BONUS</span>
-          <h2>{t("visitTitle")}</h2>
-          <p>{t("visitText")}</p>
-          <ul>
-            <li>
-              <CircleCheck size={18} />
-              {t("visitBenefit1")}
-            </li>
-            <li>
-              <CircleCheck size={18} />
-              {t("visitBenefit2")}
-            </li>
-            <li>
-              <CircleCheck size={18} />
-              {t("visitBenefit3")}
-            </li>
-          </ul>
+      <section className="market-catalog-preview">
+        <div className="market-section-heading">
           <div>
-            <a
-              href="https://maps.google.com/?q=г.%20Бишкек,%20ул.%20Токтогула,%20236"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Button size="lg" icon={<MapPin size={18} />}>
-                {t("route")}
-              </Button>
-            </a>
-            <Link to="/about">
-              <Button size="lg" variant="ghost">
-                {t("about")}
-              </Button>
-            </Link>
+            <span>TEHNO CENTER 2</span>
+            <h2>Популярные товары</h2>
           </div>
+          <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
         </div>
-      </section>
 
-      <section className="section section--soft">
-        <div className="container faq-home-grid">
-          <div>
-            <span className="eyebrow">{t("buyerHelpEyebrow")}</span>
-            <h2>{t("faqTitle")}</h2>
-            <p>{t("faqText")}</p>
-            <Link to="/faq" className="text-link">
-              {t("allQuestions")}
-              <ArrowRight size={17} />
-            </Link>
+        {catalog.length > 0 ? (
+          <ProductGrid products={catalog} />
+        ) : (
+          <div className="market-empty-catalog">
+            <strong>Каталог пока пуст</strong>
+            <p>Добавь товары в админке — они автоматически появятся здесь.</p>
           </div>
-          <FAQBlock limit={5} />
-        </div>
+        )}
       </section>
-
-      <section className="section container request-section">
-        <div className="request-copy">
-          <span className="eyebrow">{t("quickStartEyebrow")}</span>
-          <h2>{t("quickRequest")}</h2>
-          <p>{t("quickRequestText")}</p>
-          <div className="request-stats">
-            <div>
-              <strong>≤ 15 мин</strong>
-              <span>{t("avgResponse")}</span>
-            </div>
-            <div>
-              <strong>{t("fiveManagers")}</strong>
-              <span>{t("roundRobinDistribution")}</span>
-            </div>
-          </div>
-        </div>
-        <QuickLeadForm />
-      </section>
-    </>
+    </div>
   );
 }
