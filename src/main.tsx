@@ -8,5 +8,6 @@ import "@/styles/crm.css";
 import "@/styles/responsive.css";
 import "@/styles/buyer-market.css";
 import "@/styles/mbank-refresh.css";
+import "@/styles/market-v2.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App/></StrictMode>);
