@@ -7,11 +7,20 @@ import { WhatsAppButton } from "@/components/public/WhatsAppButton";
 
 export function PublicLayout() {
   const location = useLocation();
+  const routeClass = location.pathname.startsWith("/product/")
+    ? " public-app--product"
+    : location.pathname === "/catalog"
+      ? " public-app--catalog"
+      : location.pathname === "/"
+        ? " public-app--home"
+        : "";
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [location.pathname]);
+
   return (
-    <div className="public-app">
+    <div className={`public-app${routeClass}`}>
       <Header />
       <main id="main-content">
         <Outlet />
