@@ -6,6 +6,9 @@
   "engines": {
     "node": "24.x"
   },
+  "allowScripts": {
+    "esbuild@0.28.0": true
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
