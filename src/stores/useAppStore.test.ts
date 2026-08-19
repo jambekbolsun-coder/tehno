@@ -9,14 +9,15 @@ describe("useAppStore local customer preferences", () => {
     useAppStore.setState({ products: [product], cart: [], favorites: [] });
   });
 
-  it("добавляет доступный товар в корзину", () => {
+  it("добавляет товар в корзину", () => {
     useAppStore.getState().addToCart(product.id, 2);
     expect(useAppStore.getState().cart).toEqual([{ productId: product.id, quantity: 2 }]);
   });
 
-  it("не кладёт в корзину больше доступного остатка", () => {
+  it("разрешает оформить количество выше текущего складского остатка", () => {
     useAppStore.getState().addToCart(product.id, 3);
-    expect(() => useAppStore.getState().addToCart(product.id, 1)).toThrow(/доступно|Available|Жеткиликтүү/);
+    useAppStore.getState().addToCart(product.id, 7);
+    expect(useAppStore.getState().cart).toEqual([{ productId: product.id, quantity: 10 }]);
   });
 
   it("сохраняет избранное только на клиентском устройстве", () => {
