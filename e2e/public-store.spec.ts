@@ -7,10 +7,31 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("публичный каталог загружается из Supabase без тестовых товаров", async ({ page }) => {
-  await page.goto("/#/catalog");
+test("главная сразу открывает публичный каталог из Supabase", async ({ page }) => {
+  await page.goto("/#/");
   await expect(page.getByRole("heading", { name: "Каталог", exact: true })).toBeVisible();
   await expect(page.getByText(/тестовый товар/i)).toHaveCount(0);
+});
+
+test("витрина не показывает покупателю складские остатки", async ({ page }) => {
+  await page.goto("/#/");
+  await expect(page.getByRole("heading", { name: "Каталог", exact: true })).toBeVisible();
+  await expect(page.locator(".stock-dot")).toHaveCount(0);
+  await expect(page.getByText(/осталось\s+\d+|в наличии\s*[·:]\s*\d+|нет в наличии/i)).toHaveCount(0);
+});
+
+test("корзина не ограничивает количество текущим складским остатком", async ({ page }) => {
+  await page.goto("/#/");
+  const cards = page.locator(".product-card");
+  test.skip((await cards.count()) === 0, "Каталог пуст — нечего добавлять в корзину");
+  await cards.first().locator(".product-cart-button").click();
+  await page.goto("/#/cart");
+  await expect(page.locator(".cart-item").first()).toBeVisible();
+  const quantity = page.locator(".cart-item__quantity").first();
+  const increase = quantity.getByRole("button", { name: "Увеличить количество" });
+  for (let index = 0; index < 20; index += 1) await increase.click();
+  await expect(quantity.locator("span")).toHaveText("21");
+  await expect(page.getByText(/доступно только|нет в наличии|остаток/i)).toHaveCount(0);
 });
 
 test("язык и тема сохраняются после перезагрузки", async ({ page }) => {
@@ -38,9 +59,28 @@ test("мобильное меню не создаёт горизонтальны
   }
 });
 
-test("публичные страницы помещаются в экран телефона", async ({ page }, testInfo) => {
+test("на телефоне товары идут в две колонки", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#/");
+  const cards = page.locator(".product-card");
+  test.skip((await cards.count()) < 2, "В каталоге меньше двух товаров");
+  const first = await cards.nth(0).boundingBox();
+  const second = await cards.nth(1).boundingBox();
+  expect(first).not.toBeNull();
+  expect(second).not.toBeNull();
+  expect(Math.abs((first?.y ?? 0) - (second?.y ?? 0))).toBeLessThan(4);
+  expect((second?.x ?? 0) - (first?.x ?? 0)).toBeGreaterThan(120);
+});
+
+test("публичные страницы помещаются в экран телефона и не падают в console", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
   const routes = ["/", "/catalog", "/about", "/contacts", "/faq", "/favorites", "/cart", "/login"];
+  const runtimeErrors: string[] = [];
+  page.on("pageerror", (error) => runtimeErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") runtimeErrors.push(message.text());
+  });
   for (const width of [320, 360, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
     for (const route of routes) {
@@ -50,4 +90,11 @@ test("публичные страницы помещаются в экран т�
       expect(overflow, `${route} at ${width}px`).toBeLessThanOrEqual(1);
     }
   }
+  expect(runtimeErrors).toEqual([]);
+});
+
+test("невалидный QR менеджера безопасно отклоняется", async ({ page }) => {
+  await page.goto("/#/manager/join?token=invalid-token");
+  await expect(page.getByRole("heading", { name: "QR недействителен" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Перейти ко входу" })).toBeVisible();
 });
