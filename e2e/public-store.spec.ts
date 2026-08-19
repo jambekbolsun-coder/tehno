@@ -81,18 +81,16 @@ test("мобильное меню не создаёт горизонтальны
   }
 });
 
-test("на телефоне товары идут в две колонки", async ({ page }, testInfo) => {
+test("на телефоне сетка каталога всегда состоит из двух колонок", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/#/");
-  const cards = await waitForProducts(page);
-  test.skip((await cards.count()) < 2, "В каталоге меньше двух товаров");
-  const first = await cards.nth(0).boundingBox();
-  const second = await cards.nth(1).boundingBox();
-  expect(first).not.toBeNull();
-  expect(second).not.toBeNull();
-  expect(Math.abs((first?.y ?? 0) - (second?.y ?? 0))).toBeLessThan(4);
-  expect((second?.x ?? 0) - (first?.x ?? 0)).toBeGreaterThan(120);
+  const grid = page.locator(".product-grid").first();
+  await expect(grid).toBeVisible();
+  const tracks = await grid.evaluate((element) =>
+    getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).filter(Boolean),
+  );
+  expect(tracks).toHaveLength(2);
 });
 
 test("публичные страницы помещаются в экран телефона и не падают в console", async ({ page }, testInfo) => {
