@@ -6,9 +6,9 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
 
 const banners = [
-  { src: "/market-banner-sale.jpg", href: "/catalog", label: "Супер скидки на технику" },
-  { src: "/market-banner-installment.jpg", href: "/catalog", label: "Рассрочка на технику" },
-  { src: "/market-banner-delivery.jpg", href: "/catalog", label: "Доставка техники" },
+  { src: "/market-banner-sale.webp", href: "/catalog", label: "Супер скидки на технику" },
+  { src: "/market-banner-installment.webp", href: "/catalog", label: "Рассрочка на технику" },
+  { src: "/market-banner-delivery.webp", href: "/catalog", label: "Доставка техники" },
 ];
 
 export default function HomePage() {
