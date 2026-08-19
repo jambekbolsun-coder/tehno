@@ -107,7 +107,7 @@ export default function ProductPage() {
     try {
       addToCart(product.id, quantity);
       analyticsService.track("cart_add", { quantity }, product.id);
-      showToast(t("addedToCart"), "success");
+      showToast("Добавлено в корзину", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : t("errorGeneric"), "error");
     }
