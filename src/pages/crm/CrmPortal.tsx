@@ -5,6 +5,7 @@ import { AnalyticsSection, ExpensesSection, FAQManagementSection, FinanceSection
 import { AISection, FunnelSection, LeadsSection } from "@/pages/crm/OperationsSections";
 import { CustomersSection, EarningsSection, SuppliersSection } from "@/pages/crm/PeopleSections";
 import { ManagersQrSection } from "@/pages/crm/ManagersQrSection";
+import { OfflineSalesAdminSection } from "@/pages/crm/OfflineSalesAdminSection";
 
 export default function CrmPortal({ role }: { role: "admin" | "manager" }) {
   const { section } = useParams();
@@ -23,7 +24,7 @@ export default function CrmPortal({ role }: { role: "admin" | "manager" }) {
   }
   if (section === "inventory") return <InventorySection/>;
   if (section === "online-sales") return <SalesSection role="admin" source="online"/>;
-  if (section === "offline-sales") return <SalesSection role="admin" source="offline"/>;
+  if (section === "offline-sales") return <OfflineSalesAdminSection/>;
   if (section === "managers") return <ManagersQrSection/>;
   if (section === "suppliers") return <SuppliersSection/>;
   if (section === "returns") return <ReturnsSection/>;
