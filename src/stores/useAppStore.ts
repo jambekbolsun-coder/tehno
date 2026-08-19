@@ -233,15 +233,12 @@ export const useAppStore = create<AppState>((set, get) => {
       const messages = translations[get().language];
       const product = get().products.find((item) => item.id === productId);
       if (!product) throw new Error(messages.productNotFound);
-      const available = product.stock - product.reserved;
       const current = get().cart;
       const item = current.find((entry) => entry.productId === productId);
-      const nextQuantity = (item?.quantity ?? 0) + quantity;
-      if (available <= 0 || nextQuantity > available)
-        throw new Error(`${messages.availableOnly}: ${Math.max(0, available)} ${messages.units}`);
+      const nextQuantity = (item?.quantity ?? 0) + Math.max(1, quantity);
       const cart = item
         ? current.map((entry) => entry.productId === productId ? { ...entry, quantity: nextQuantity } : entry)
-        : [...current, { productId, quantity }];
+        : [...current, { productId, quantity: Math.max(1, quantity) }];
       preferenceService.setCart(cart);
       set({ cart });
       toast(messages.cartAdded);
@@ -251,11 +248,6 @@ export const useAppStore = create<AppState>((set, get) => {
       if (quantity <= 0) return get().removeFromCart(productId);
       const product = get().products.find((item) => item.id === productId);
       if (!product) return;
-      const available = product.stock - product.reserved;
-      if (quantity > available) {
-        const messages = translations[get().language];
-        return toast(`${messages.availableOnly}: ${available} ${messages.units}`, "error");
-      }
       const cart = get().cart.map((item) => item.productId === productId ? { ...item, quantity } : item);
       preferenceService.setCart(cart);
       set({ cart });
@@ -283,18 +275,12 @@ export const useAppStore = create<AppState>((set, get) => {
       set({ recentProductIds });
     },
 
-    createLead: async (input) => {
-      return supabaseGateway.createPublicLead(input, get().language);
-    },
+    createLead: async (input) => supabaseGateway.createPublicLead(input, get().language),
     reassignLead: (leadId, managerId) => mutate(() => supabaseGateway.reassignLead(leadId, managerId), "Заявка переназначена"),
     changeLeadStatus: (leadId, status, comment) => mutate(() => supabaseGateway.changeLeadStatus(leadId, status, comment)),
     saveProduct: async (product, deliveryItemId) => {
       if (product.images.length > 5) return toast("Можно добавить максимум пять фотографий", "error");
-      await mutate(
-        () => supabaseGateway.saveProduct(product, deliveryItemId),
-        "Товар сохранён",
-        true,
-      );
+      await mutate(() => supabaseGateway.saveProduct(product, deliveryItemId), "Товар сохранён", true);
     },
     archiveProduct: (productId) => {
       const product = get().products.find((item) => item.id === productId);
@@ -302,26 +288,11 @@ export const useAppStore = create<AppState>((set, get) => {
     },
     deleteProduct: (productId) => mutate(() => supabaseGateway.deleteProduct(productId), "Товар удалён"),
     adjustStock: (productId, delta, reason) => mutate(() => supabaseGateway.adjustStock(productId, delta, reason), "Остаток обновлён"),
-    addManager: (input) => mutate(
-      () => supabaseGateway.inviteManager(input.email, input.name, input.phone),
-      "Приглашение отправлено на email",
-    ),
+    addManager: (input) => mutate(() => supabaseGateway.inviteManager(input.email, input.name, input.phone), "Приглашение отправлено на email"),
     deleteManager: (managerId) => mutate(() => supabaseGateway.archiveManager(managerId), "Менеджер отключён"),
-    addSupplier: (input, items) => mutate(
-      () => supabaseGateway.addSupplier(input, items),
-      "Поставщик и первая поставка добавлены",
-      true,
-    ),
-    addSupplierDelivery: (supplierId, items, notes) => mutate(
-      () => supabaseGateway.addSupplierDelivery(supplierId, items, notes),
-      "Поставка добавлена",
-      true,
-    ),
-    deleteSupplier: (supplierId) => mutate(
-      () => supabaseGateway.archiveSupplier(supplierId),
-      "Поставщик удалён",
-      true,
-    ),
+    addSupplier: (input, items) => mutate(() => supabaseGateway.addSupplier(input, items), "Поставщик и первая поставка добавлены", true),
+    addSupplierDelivery: (supplierId, items, notes) => mutate(() => supabaseGateway.addSupplierDelivery(supplierId, items, notes), "Поставка добавлена", true),
+    deleteSupplier: (supplierId) => mutate(() => supabaseGateway.archiveSupplier(supplierId), "Поставщик удалён", true),
     toggleManagerDistribution: (managerId) => {
       const manager = get().managers.find((item) => item.id === managerId);
       return mutate(() => supabaseGateway.setManagerDistribution(managerId, !manager?.acceptsLeads));

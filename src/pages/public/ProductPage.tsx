@@ -1,6 +1,7 @@
 import {
-  Bell,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   Heart,
   MapPin,
   MessageCircle,
@@ -39,6 +40,7 @@ export default function ProductPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const product = products.find((item) => item.slug === slug);
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function ProductPage() {
     setSelectedImage(0);
     setZoomOpen(false);
     setQuantity(1);
+    setDescriptionExpanded(false);
   }, [product?.id]);
 
   const similar = useMemo(
@@ -71,6 +74,7 @@ export default function ProductPage() {
     .filter((item) => recentIds.includes(item.id) && item.id !== product?.id)
     .sort((a, b) => recentIds.indexOf(a.id) - recentIds.indexOf(b.id))
     .slice(0, 5);
+
   if (!product)
     return (
       <div className="container page-space">
@@ -82,7 +86,6 @@ export default function ProductPage() {
       </div>
     );
 
-  const available = product.stock - product.reserved;
   const activePromotion =
     product.promotion?.isActive &&
     isPromotionActive(product.promotion.startAt, product.promotion.endAt)
@@ -91,6 +94,8 @@ export default function ProductPage() {
   const price = activePromotion?.specialPrice ?? product.salePrice;
   const discount = calculateDiscountPercent(price, product.oldPrice);
   const isFavorite = favorites.includes(product.id);
+  const description = product.description[language] || product.description.ru;
+  const shouldCollapseDescription = description.length > 320;
   const add = () => {
     try {
       addToCart(product.id, quantity);
@@ -98,15 +103,15 @@ export default function ProductPage() {
       showToast(error instanceof Error ? error.message : t("errorGeneric"), "error");
     }
   };
+
   return (
-    <div className="container product-page page-space">
+    <div className="container product-page page-space product-page--service-ui">
       <nav className="breadcrumbs" aria-label={t("breadcrumbs")}>
-        <Link to="/">{t("home")}</Link>
-        <ChevronRight size={14} />
         <Link to="/catalog">{t("catalog")}</Link>
         <ChevronRight size={14} />
         <span>{product.name[language]}</span>
       </nav>
+
       <div className="product-detail-grid">
         <ProductSwipeGallery
           images={product.images.slice(0, 5)}
@@ -129,94 +134,56 @@ export default function ProductPage() {
               <span>{t("addFavorite")}</span>
             </button>
           </div>
+
           <h1>{product.name[language]}</h1>
           <div className="product-rating">
-            <span>
-              <Star size={16} fill="currentColor" /> {product.rating}
-            </span>
+            <span><Star size={16} fill="currentColor" /> {product.rating}</span>
             <span>{product.views.toLocaleString()} {t("views")}</span>
-            <span>
-              {t("model")}: {product.model}
-            </span>
+            <span>{t("model")}: {product.model}</span>
           </div>
+
           {activePromotion && (
-            <div
-              className={`product-promo-banner product-promo-banner--${activePromotion.type}`}
-            >
+            <div className={`product-promo-banner product-promo-banner--${activePromotion.type}`}>
               <strong>{activePromotion.title[language]}</strong>
-              {activePromotion.endAt && (
-                <span>{t("until")} {formatDate(activePromotion.endAt)}</span>
-              )}
+              {activePromotion.endAt && <span>{t("until")} {formatDate(activePromotion.endAt)}</span>}
             </div>
           )}
+
           <div className="product-price">
             <strong>{formatMoney(price)}</strong>
-            {product.oldPrice && product.oldPrice > price && (
-              <del>{formatMoney(product.oldPrice)}</del>
-            )}
+            {product.oldPrice && product.oldPrice > price && <del>{formatMoney(product.oldPrice)}</del>}
             {discount > 0 && <span>-{discount}%</span>}
           </div>
-          <div
-            className={`product-stock-status${available <= 0 ? " is-empty" : ""}`}
-          >
+
+          <div className="product-order-availability">
             <span />
-            {available > 0
-              ? `${t("inStock")} · ${available} ${t("units")}`
-              : t("outOfStock")}
+            Доступно к заказу
           </div>
-          {available > 0 ? (
-            <div className="product-buy-row">
-              <div className="quantity-control">
-                <button
-                  onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-                  aria-label={t("decrease")}
-                >
-                  <Minus size={17} />
-                </button>
-                <span>{quantity}</span>
-                <button
-                  onClick={() =>
-                    setQuantity((value) => Math.min(available, value + 1))
-                  }
-                  aria-label={t("increase")}
-                >
-                  <Plus size={17} />
-                </button>
-              </div>
-              <Button size="lg" icon={<ShoppingCart size={19} />} onClick={add}>
-                {t("addCart")}
-              </Button>
+
+          <div className="product-buy-row">
+            <div className="quantity-control">
+              <button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label={t("decrease")}>
+                <Minus size={17} />
+              </button>
+              <span>{quantity}</span>
+              <button onClick={() => setQuantity((value) => value + 1)} aria-label={t("increase")}>
+                <Plus size={17} />
+              </button>
             </div>
-          ) : (
-            <Button
-              size="lg"
-              variant="secondary"
-              icon={<Bell size={19} />}
-              onClick={() =>
-                navigate(`/checkout?product=${product.id}&notify=1`)
-              }
-            >
-              {t("notify")}
+            <Button size="lg" icon={<ShoppingCart size={19} />} onClick={add}>
+              {t("addCart")}
             </Button>
-          )}
+          </div>
+
           <div className="product-actions-secondary">
-            <Button
-              variant="dark"
-              size="lg"
-              onClick={() =>
-                navigate(`/checkout?product=${product.id}&method=installment`)
-              }
-            >
+            <Button variant="dark" size="lg" onClick={() => navigate(`/checkout?product=${product.id}&method=installment`)}>
               {t("buyInstallment")}
             </Button>
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={() => navigate(`/checkout?product=${product.id}`)}
-            >
+            <Button variant="ghost" size="lg" onClick={() => navigate(`/checkout?product=${product.id}`)}>
               {t("leaveRequest")}
             </Button>
           </div>
+
           <a
             className="product-whatsapp"
             href={buildWhatsAppUrl(
@@ -230,41 +197,42 @@ export default function ProductPage() {
             <span>{t("whatsapp")}</span>
             <ChevronRight size={18} />
           </a>
+
           <div className="product-service-grid">
             <div>
               <ShieldCheck size={21} />
-              <span>
-                <strong>{t("warranty")}</strong>
-                {formatMonths(product.warrantyMonths, language)}
-              </span>
+              <span><strong>{t("warranty")}</strong>{formatMonths(product.warrantyMonths, language)}</span>
             </div>
             <div>
               <Truck size={21} />
-              <span>
-                <strong>{t("delivery")}</strong>{t("deliveryRegions")}
-              </span>
+              <span><strong>{t("delivery")}</strong>{t("deliveryRegions")}</span>
             </div>
             <div>
               <MapPin size={21} />
-              <span>
-                <strong>{t("pickup")}</strong>Токтогула, 236
-              </span>
+              <span><strong>{t("pickup")}</strong>Токтогула, 236</span>
             </div>
           </div>
         </section>
       </div>
 
       <div className="product-lower-grid">
-        <section className="product-description-card">
+        <section className={`product-description-card${descriptionExpanded ? " is-expanded" : ""}`}>
           <div>
             <h2>{t("description")}</h2>
-            <p>{product.description[language]}</p>
+            <div className={`product-description-text${shouldCollapseDescription && !descriptionExpanded ? " is-collapsed" : ""}`}>
+              <p>{description}</p>
+            </div>
+            {shouldCollapseDescription && (
+              <button className="product-description-toggle" onClick={() => setDescriptionExpanded((value) => !value)}>
+                {descriptionExpanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
+                {descriptionExpanded ? "Скрыть" : "Показать полностью"}
+              </button>
+            )}
           </div>
         </section>
-        {product.installmentEligible && (
-          <InstallmentCalculator amount={price * quantity} />
-        )}
+        {product.installmentEligible && <InstallmentCalculator amount={price * quantity} />}
       </div>
+
       {similar.length > 0 && (
         <section className="section product-related">
           <h2>{t("similar")}</h2>
