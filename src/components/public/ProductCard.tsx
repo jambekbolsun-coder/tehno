@@ -69,7 +69,6 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         {activePromotion?.endAt && <span className="product-card__deadline">{t("until")} {formatDate(activePromotion.endAt)}</span>}
         <div className="product-card__footer">
-          <span className="stock-dot storefront-available">Доступно к заказу</span>
           <button className="product-cart-button" onClick={add} aria-label={t("addCart")}>
             <ShoppingCart size={18} />
           </button>
