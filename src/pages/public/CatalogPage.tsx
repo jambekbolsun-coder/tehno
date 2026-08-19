@@ -37,11 +37,11 @@ export default function CatalogPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const debouncedQuery = useDebounce(query, 320);
-  const pageSize = 12;
+  const pageSize = 20;
 
   useEffect(() => {
     setLoading(true);
-    const timer = window.setTimeout(() => setLoading(false), 220);
+    const timer = window.setTimeout(() => setLoading(false), 180);
     setPage(1);
     return () => window.clearTimeout(timer);
   }, [debouncedQuery, category, brand, promotion, maxPrice, sort]);
@@ -103,13 +103,24 @@ export default function CatalogPage() {
     brand !== "all",
     promotion !== "all",
     maxPrice < 100000,
+    sort !== "popular",
   ].filter(Boolean).length;
 
   const FilterContent = () => (
-    <div className="catalog-filters">
+    <div className="catalog-filters market-filter-sheet">
       <div className="filter-header">
         <strong><SlidersHorizontal size={18} />{t("filters")}</strong>
         <button onClick={reset}>{t("reset")}</button>
+      </div>
+      <div className="filter-group">
+        <span>{t("sort")}</span>
+        <select value={sort} onChange={(event) => setSort(event.target.value as SortValue)}>
+          <option value="popular">{t("sortPopular")}</option>
+          <option value="new">{t("sortNew")}</option>
+          <option value="price-asc">{t("sortPriceAsc")}</option>
+          <option value="price-desc">{t("sortPriceDesc")}</option>
+          <option value="discount">{t("sortDiscount")}</option>
+        </select>
       </div>
       <div className="filter-group">
         <span>{t("category")}</span>
@@ -139,7 +150,6 @@ export default function CatalogPage() {
           <b>{t("upTo")} {new Intl.NumberFormat(language === "en" ? "en-US" : "ru-RU").format(maxPrice)} сом</b>
         </div>
         <input type="range" min="4000" max="100000" step="1000" value={maxPrice} onChange={(event) => setMaxPrice(Number(event.target.value))} />
-        <div className="range-scale"><span>4 000</span><span>100 000+</span></div>
       </div>
       <div className="filter-group">
         <span>{t("promotions")}</span>
@@ -164,42 +174,31 @@ export default function CatalogPage() {
   );
 
   return (
-    <div className="catalog-page container page-space catalog-page--service-ui">
-      <header className="page-heading catalog-service-heading">
-        <span className="eyebrow">TEHNO CENTER</span>
+    <div className="catalog-page container page-space catalog-page--market-v2">
+      <header className="market-catalog-title">
         <h1>{t("catalog")}</h1>
-        <p>Техника и товары, которые можно заказать сразу.</p>
       </header>
 
-      <div className="catalog-toolbar">
-        <form className="catalog-search" onSubmit={(event) => event.preventDefault()}>
-          <Search size={20} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("searchPlaceholder")} aria-label={t("search")} />
-          {query && <button type="button" onClick={() => setQuery("")} aria-label={t("clearSearch")}><X size={17} /></button>}
-        </form>
-        <button className="mobile-filter-button" onClick={() => setFilterOpen(true)}>
-          <Filter size={18} />{t("filters")}{activeFilterCount > 0 && <span>{activeFilterCount}</span>}
+      <div className="market-catalog-searchbar">
+        <Search size={20} />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("searchPlaceholder")}
+          aria-label={t("search")}
+        />
+        {query && (
+          <button type="button" className="market-search-clear" onClick={() => setQuery("")} aria-label={t("clearSearch")}>
+            <X size={17} />
+          </button>
+        )}
+        <button type="button" className="market-filter-trigger" onClick={() => setFilterOpen(true)} aria-label={t("filters")}>
+          <Filter size={20} />
+          {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
         </button>
-        <label className="sort-select">
-          <span>{t("sort")}</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as SortValue)}>
-            <option value="popular">{t("sortPopular")}</option>
-            <option value="new">{t("sortNew")}</option>
-            <option value="price-asc">{t("sortPriceAsc")}</option>
-            <option value="price-desc">{t("sortPriceDesc")}</option>
-            <option value="discount">{t("sortDiscount")}</option>
-          </select>
-        </label>
       </div>
 
-      <nav className="catalog-category-rail" aria-label={t("categories")}>
-        <button className={category === "all" ? "active" : ""} onClick={() => setCategory("all")}>{t("allProducts")}</button>
-        {categories.filter((item) => item.isVisible).map((item) => (
-          <button key={item.id} className={category === item.id ? "active" : ""} onClick={() => setCategory(item.id)}>{item.name[language]}</button>
-        ))}
-      </nav>
-
-      <div className="catalog-layout">
+      <div className="catalog-layout market-catalog-layout">
         <aside className="catalog-sidebar"><FilterContent /></aside>
         <section className="catalog-results">
           <div className="catalog-result-meta">

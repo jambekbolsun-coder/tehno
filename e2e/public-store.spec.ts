@@ -17,17 +17,27 @@ const waitForProducts = async (page: Page) => {
   return cards;
 };
 
-test("главная сразу открывает публичный каталог из Supabase", async ({ page }) => {
+test("главная открывает мобильную витрину с автокаруселью и живыми товарами", async ({ page }) => {
   await page.goto("/#/");
-  await expect(page.getByRole("heading", { name: "Каталог", exact: true })).toBeVisible();
+  await expect(page.locator(".market-banner-carousel")).toBeVisible();
+  await expect(page.locator(".market-banner")).toHaveCount(3);
   await expect(page.getByText(/тестовый товар/i)).toHaveCount(0);
 });
 
 test("витрина не показывает покупателю складские остатки", async ({ page }) => {
   await page.goto("/#/");
-  await expect(page.getByRole("heading", { name: "Каталог", exact: true })).toBeVisible();
+  await expect(page.locator(".market-banner-carousel")).toBeVisible();
   await expect(page.locator(".stock-dot")).toHaveCount(0);
   await expect(page.getByText(/осталось\s+\d+|в наличии\s*[·:]\s*\d+|нет в наличии/i)).toHaveCount(0);
+});
+
+test("каталог показывает только компактный поиск, а фильтры открывает по кнопке", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
+  await page.goto("/#/catalog");
+  await expect(page.locator(".market-catalog-searchbar")).toBeVisible();
+  await expect(page.locator(".catalog-sidebar")).toBeHidden();
+  await page.locator(".market-filter-trigger").click();
+  await expect(page.locator(".market-filter-sheet").last()).toBeVisible();
 });
 
 test("корзина не ограничивает количество текущим складским остатком", async ({ page }) => {
@@ -84,7 +94,7 @@ test("мобильное меню не создаёт горизонтальны
 test("на телефоне сетка каталога всегда состоит из двух колонок", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/#/");
+  await page.goto("/#/catalog");
   const grid = page.locator(".product-grid").first();
   await expect(grid).toBeVisible();
   const tracks = await grid.evaluate((element) =>

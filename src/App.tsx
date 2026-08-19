@@ -8,6 +8,7 @@ import { analyticsService } from "@/services/AnalyticsService";
 import { hasPendingInvite } from "@/lib/supabase";
 import { useAppStore } from "@/stores/useAppStore";
 
+const HomePage = lazy(() => import("@/pages/public/HomePage"));
 const CatalogPage = lazy(() => import("@/pages/public/CatalogPage"));
 const ProductPage = lazy(() => import("@/pages/public/ProductPage"));
 const FavoritesPage = lazy(() => import("@/pages/public/FavoritesPage"));
@@ -54,7 +55,7 @@ export default function App() {
       <Suspense fallback={<RouteLoader/>}>
         <Routes>
           <Route element={<PublicLayout/>}>
-            <Route path="/" element={<CatalogPage/>}/>
+            <Route path="/" element={<HomePage/>}/>
             <Route path="/catalog" element={<CatalogPage/>}/>
             <Route path="/product/:slug" element={<ProductPage/>}/>
             <Route path="/favorites" element={<FavoritesPage/>}/>

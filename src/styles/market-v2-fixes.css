@@ -1,0 +1,62 @@
+@media (max-width: 760px) {
+  .public-app--catalog .site-header--service-ui .header-search {
+    display: none !important;
+  }
+
+  .public-app--catalog .site-header--service-ui .site-header__inner {
+    min-height: 72px;
+    grid-template-rows: auto;
+  }
+
+  .public-app--product .site-header--service-ui {
+    display: none !important;
+  }
+
+  .product-card__footer {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .product-cart-button {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 0 6px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+  }
+
+  .product-cart-button span {
+    display: block !important;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .whatsapp-fab {
+    display: none !important;
+  }
+
+  .market-featured-panel .market-section-heading > a {
+    max-width: 88px;
+    font-size: 11px !important;
+    line-height: 1.15;
+    text-align: right;
+    white-space: normal;
+  }
+
+  .market-featured-panel .market-section-heading > a svg {
+    flex: 0 0 auto;
+  }
+
+  .market-featured-panel .market-section-heading h1 {
+    max-width: 220px;
+  }
+
+  .public-app--product .product-page--market-v2.page-space {
+    padding-top: 8px;
+  }
+}

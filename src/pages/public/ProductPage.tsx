@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -7,6 +8,7 @@ import {
   MessageCircle,
   Minus,
   Plus,
+  Share2,
   ShieldCheck,
   ShoppingCart,
   Star,
@@ -41,6 +43,7 @@ export default function ProductPage() {
   const [zoomOpen, setZoomOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [specsExpanded, setSpecsExpanded] = useState(false);
   const product = products.find((item) => item.slug === slug);
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export default function ProductPage() {
     setZoomOpen(false);
     setQuantity(1);
     setDescriptionExpanded(false);
+    setSpecsExpanded(false);
   }, [product?.id]);
 
   const similar = useMemo(
@@ -64,16 +68,17 @@ export default function ProductPage() {
               (item) =>
                 item.categoryId === product.categoryId &&
                 item.id !== product.id &&
-                item.isVisible,
+                item.isVisible &&
+                !item.isArchived,
             )
-            .slice(0, 5)
+            .slice(0, 6)
         : [],
     [product, products],
   );
   const recentlyViewed = products
     .filter((item) => recentIds.includes(item.id) && item.id !== product?.id)
     .sort((a, b) => recentIds.indexOf(a.id) - recentIds.indexOf(b.id))
-    .slice(0, 5);
+    .slice(0, 6);
 
   if (!product)
     return (
@@ -95,32 +100,71 @@ export default function ProductPage() {
   const discount = calculateDiscountPercent(price, product.oldPrice);
   const isFavorite = favorites.includes(product.id);
   const description = product.description[language] || product.description.ru;
-  const shouldCollapseDescription = description.length > 320;
+  const shouldCollapseDescription = description.length > 260;
+  const visibleSpecs = specsExpanded ? product.specifications : product.specifications.slice(0, 5);
+
   const add = () => {
     try {
       addToCart(product.id, quantity);
+      analyticsService.track("cart_add", { quantity }, product.id);
+      showToast("Добавлено в корзину", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : t("errorGeneric"), "error");
     }
   };
 
+  const share = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name[language], url: window.location.href });
+        return;
+      }
+      await navigator.clipboard.writeText(window.location.href);
+      showToast("Ссылка скопирована", "success");
+    } catch {
+      // Пользователь мог закрыть системное окно Share — это не ошибка интерфейса.
+    }
+  };
+
   return (
-    <div className="container product-page page-space product-page--service-ui">
+    <div className="container product-page page-space product-page--market-v2">
+      <div className="market-product-toolbar">
+        <button type="button" onClick={() => navigate(-1)} aria-label="Назад"><ArrowLeft size={24} /></button>
+        <div>
+          <button
+            type="button"
+            className={isFavorite ? "is-active" : ""}
+            onClick={() => toggleFavorite(product.id)}
+            aria-label={t("addFavorite")}
+          >
+            <Heart size={24} fill={isFavorite ? "currentColor" : "none"} />
+          </button>
+          <button type="button" onClick={share} aria-label="Поделиться"><Share2 size={24} /></button>
+        </div>
+      </div>
+
       <nav className="breadcrumbs" aria-label={t("breadcrumbs")}>
         <Link to="/catalog">{t("catalog")}</Link>
         <ChevronRight size={14} />
         <span>{product.name[language]}</span>
       </nav>
 
-      <div className="product-detail-grid">
-        <ProductSwipeGallery
-          images={product.images.slice(0, 5)}
-          index={selectedImage}
-          title={product.name[language]}
-          onIndexChange={setSelectedImage}
-          onOpen={() => setZoomOpen(true)}
-        />
-        <section className="product-info">
+      <div className="product-detail-grid market-product-detail">
+        <section className="market-product-gallery-card">
+          <div className="market-product-badges">
+            {discount > 0 && <span>-{discount}%</span>}
+            {product.installmentEligible && <b>0·0·12</b>}
+          </div>
+          <ProductSwipeGallery
+            images={product.images.slice(0, 5)}
+            index={selectedImage}
+            title={product.name[language]}
+            onIndexChange={setSelectedImage}
+            onOpen={() => setZoomOpen(true)}
+          />
+        </section>
+
+        <section className="product-info market-product-info-card">
           <div className="product-info__top">
             <div>
               <span className="product-brand">{product.brand}</span>
@@ -137,7 +181,7 @@ export default function ProductPage() {
 
           <h1>{product.name[language]}</h1>
           <div className="product-rating">
-            <span><Star size={16} fill="currentColor" /> {product.rating}</span>
+            {product.rating ? <span><Star size={16} fill="currentColor" /> {product.rating}</span> : null}
             <span>{product.views.toLocaleString()} {t("views")}</span>
             <span>{t("model")}: {product.model}</span>
           </div>
@@ -152,7 +196,6 @@ export default function ProductPage() {
           <div className="product-price">
             <strong>{formatMoney(price)}</strong>
             {product.oldPrice && product.oldPrice > price && <del>{formatMoney(product.oldPrice)}</del>}
-            {discount > 0 && <span>-{discount}%</span>}
           </div>
 
           <div className="product-order-availability">
@@ -215,36 +258,71 @@ export default function ProductPage() {
         </section>
       </div>
 
-      <div className="product-lower-grid">
-        <section className={`product-description-card${descriptionExpanded ? " is-expanded" : ""}`}>
+      <div className="product-lower-grid market-product-lower-grid">
+        <section className={`product-description-card market-product-card${descriptionExpanded ? " is-expanded" : ""}`}>
           <div>
             <h2>{t("description")}</h2>
             <div className={`product-description-text${shouldCollapseDescription && !descriptionExpanded ? " is-collapsed" : ""}`}>
-              <p>{description}</p>
+              <p>{description || "Описание товара будет добавлено позже."}</p>
             </div>
             {shouldCollapseDescription && (
               <button className="product-description-toggle" onClick={() => setDescriptionExpanded((value) => !value)}>
+                {descriptionExpanded ? "Скрыть" : "Показать больше"}
                 {descriptionExpanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
-                {descriptionExpanded ? "Скрыть" : "Показать полностью"}
               </button>
             )}
           </div>
         </section>
+
+        {product.specifications.length > 0 && (
+          <section className="market-product-card market-specifications-card">
+            <h2>Общие характеристики</h2>
+            <dl>
+              {visibleSpecs.map((spec) => (
+                <div key={spec.id}>
+                  <dt>{spec.label[language] || spec.label.ru}</dt>
+                  <dd>{spec.value[language] || spec.value.ru}</dd>
+                </div>
+              ))}
+            </dl>
+            {product.specifications.length > 5 && (
+              <button className="market-spec-toggle" onClick={() => setSpecsExpanded((value) => !value)}>
+                {specsExpanded ? "Скрыть" : "Показать больше"}
+                {specsExpanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
+              </button>
+            )}
+          </section>
+        )}
+
+        <section className="market-product-card market-seller-card">
+          <h2>Продавец</h2>
+          <div>
+            <img src="/logo.jpg" alt="TEHNO CENTER 2" />
+            <span><small>Магазин</small><strong>TEHNO CENTER 2</strong></span>
+            <ChevronRight size={22} />
+          </div>
+        </section>
+
         {product.installmentEligible && <InstallmentCalculator amount={price * quantity} />}
       </div>
 
       {similar.length > 0 && (
-        <section className="section product-related">
-          <h2>{t("similar")}</h2>
+        <section className="section product-related market-related-products">
+          <div className="market-section-heading"><h2>{t("similar")}</h2></div>
           <ProductGrid products={similar} />
         </section>
       )}
       {recentlyViewed.length > 0 && (
-        <section className="section product-related">
-          <h2>{t("recentlyViewed")}</h2>
+        <section className="section product-related market-related-products">
+          <div className="market-section-heading"><h2>{t("recentlyViewed")}</h2></div>
           <ProductGrid products={recentlyViewed} />
         </section>
       )}
+
+      <div className="market-mobile-buybar">
+        <button type="button" onClick={add}>{t("addCart")}</button>
+      </div>
+
       <ProductLightbox
         open={zoomOpen}
         images={product.images.slice(0, 5)}
