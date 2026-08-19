@@ -9,7 +9,7 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:4173",
     trace: "on-first-retry",
-    screenshot: "only-on-failure",
+    screenshot: process.env.CI ? "on" : "only-on-failure",
   },
   projects: [
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
@@ -22,4 +22,3 @@ export default defineConfig({
     timeout: 120_000,
   },
 });
-
