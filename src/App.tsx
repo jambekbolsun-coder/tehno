@@ -8,7 +8,6 @@ import { analyticsService } from "@/services/AnalyticsService";
 import { hasPendingInvite } from "@/lib/supabase";
 import { useAppStore } from "@/stores/useAppStore";
 
-const HomePage = lazy(() => import("@/pages/public/HomePage"));
 const CatalogPage = lazy(() => import("@/pages/public/CatalogPage"));
 const ProductPage = lazy(() => import("@/pages/public/ProductPage"));
 const FavoritesPage = lazy(() => import("@/pages/public/FavoritesPage"));
@@ -21,6 +20,7 @@ const SuccessPage = lazy(() => import("@/pages/public/SuccessPage"));
 const NotFoundPage = lazy(() => import("@/pages/public/NotFoundPage"));
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const InvitePage = lazy(() => import("@/pages/auth/InvitePage"));
+const ManagerJoinPage = lazy(() => import("@/pages/auth/ManagerJoinPage"));
 const CrmPortal = lazy(() => import("@/pages/crm/CrmPortal"));
 
 function AppEffects() {
@@ -54,7 +54,7 @@ export default function App() {
       <Suspense fallback={<RouteLoader/>}>
         <Routes>
           <Route element={<PublicLayout/>}>
-            <Route path="/" element={<HomePage/>}/>
+            <Route path="/" element={<CatalogPage/>}/>
             <Route path="/catalog" element={<CatalogPage/>}/>
             <Route path="/product/:slug" element={<ProductPage/>}/>
             <Route path="/favorites" element={<FavoritesPage/>}/>
@@ -68,6 +68,7 @@ export default function App() {
           </Route>
           <Route path="/login" element={<LoginPage/>}/>
           <Route path="/invite" element={<InvitePage/>}/>
+          <Route path="/manager/join" element={<ManagerJoinPage/>}/>
           <Route element={<RouteGuard role="admin"/>}>
             <Route path="/admin" element={<Navigate to="/crm/admin/dashboard" replace/>}/>
             <Route path="/crm/admin" element={<CrmLayout role="admin"/>}>
