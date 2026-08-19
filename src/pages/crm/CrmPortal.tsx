@@ -3,7 +3,8 @@ import { CatalogSection, InventorySection, SalesSection } from "@/pages/crm/Cata
 import { DashboardSection } from "@/pages/crm/DashboardSection";
 import { AnalyticsSection, ExpensesSection, FAQManagementSection, FinanceSection, NotificationsSection, ProfileSection, ReturnsSection, SettingsSection } from "@/pages/crm/ManagementSections";
 import { AISection, FunnelSection, LeadsSection } from "@/pages/crm/OperationsSections";
-import { CustomersSection, EarningsSection, ManagersSection, SuppliersSection } from "@/pages/crm/PeopleSections";
+import { CustomersSection, EarningsSection, SuppliersSection } from "@/pages/crm/PeopleSections";
+import { ManagersQrSection } from "@/pages/crm/ManagersQrSection";
 
 export default function CrmPortal({ role }: { role: "admin" | "manager" }) {
   const { section } = useParams();
@@ -23,7 +24,7 @@ export default function CrmPortal({ role }: { role: "admin" | "manager" }) {
   if (section === "inventory") return <InventorySection/>;
   if (section === "online-sales") return <SalesSection role="admin" source="online"/>;
   if (section === "offline-sales") return <SalesSection role="admin" source="offline"/>;
-  if (section === "managers") return <ManagersSection/>;
+  if (section === "managers") return <ManagersQrSection/>;
   if (section === "suppliers") return <SuppliersSection/>;
   if (section === "returns") return <ReturnsSection/>;
   if (section === "expenses") return <ExpensesSection/>;
