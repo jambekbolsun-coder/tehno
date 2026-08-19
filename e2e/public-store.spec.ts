@@ -1,11 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    for (const key of Object.keys(localStorage)) if (key.startsWith("tc2:")) localStorage.removeItem(key);
-    sessionStorage.clear();
+    const marker = "__tc2_e2e_reset_done";
+    if (sessionStorage.getItem(marker)) return;
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("tc2:")) localStorage.removeItem(key);
+    }
+    sessionStorage.setItem(marker, "1");
   });
 });
+
+const waitForProducts = async (page: Page) => {
+  const cards = page.locator(".product-card");
+  await cards.first().waitFor({ state: "visible", timeout: 8_000 }).catch(() => undefined);
+  return cards;
+};
 
 test("главная сразу открывает публичный каталог из Supabase", async ({ page }) => {
   await page.goto("/#/");
@@ -22,7 +32,7 @@ test("витрина не показывает покупателю складс
 
 test("корзина не ограничивает количество текущим складским остатком", async ({ page }) => {
   await page.goto("/#/");
-  const cards = page.locator(".product-card");
+  const cards = await waitForProducts(page);
   test.skip((await cards.count()) === 0, "Каталог пуст — нечего добавлять в корзину");
   await cards.first().locator(".product-cart-button").click();
   await page.goto("/#/cart");
@@ -34,11 +44,23 @@ test("корзина не ограничивает количество теку
   await expect(page.getByText(/доступно только|нет в наличии|остаток/i)).toHaveCount(0);
 });
 
-test("язык и тема сохраняются после перезагрузки", async ({ page }) => {
+test("язык и тема сохраняются после перезагрузки", async ({ page }, testInfo) => {
   await page.goto("/#/");
-  await page.getByRole("button", { name: "RU", exact: true }).first().click();
-  await page.locator(".language-switcher__menu").getByText("EN", { exact: true }).click();
-  await page.getByRole("button", { name: "Change theme" }).click();
+  const mobile = testInfo.project.name.includes("mobile");
+
+  if (mobile) {
+    await page.getByRole("button", { name: "Открыть меню" }).click();
+    const drawer = page.locator(".mobile-drawer");
+    await drawer.locator(".language-tabs").getByText("EN", { exact: true }).click();
+    await drawer.locator(".mobile-theme").click();
+  } else {
+    await page.getByRole("button", { name: "RU", exact: true }).first().click();
+    await page.locator(".language-switcher__menu").getByText("EN", { exact: true }).click();
+    await page.locator(".header-actions > button.icon-button").first().click();
+  }
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
@@ -63,7 +85,7 @@ test("на телефоне товары идут в две колонки", asy
   test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/#/");
-  const cards = page.locator(".product-card");
+  const cards = await waitForProducts(page);
   test.skip((await cards.count()) < 2, "В каталоге меньше двух товаров");
   const first = await cards.nth(0).boundingBox();
   const second = await cards.nth(1).boundingBox();
