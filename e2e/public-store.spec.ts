@@ -28,7 +28,7 @@ test("корзина не ограничивает количество теку
   await page.goto("/#/cart");
   await expect(page.locator(".cart-item").first()).toBeVisible();
   const quantity = page.locator(".cart-item__quantity").first();
-  const increase = quantity.getByRole("button", { name: "Увеличить количество" });
+  const increase = quantity.getByRole("button", { name: "Увеличить", exact: true });
   for (let index = 0; index < 20; index += 1) await increase.click();
   await expect(quantity.locator("span")).toHaveText("21");
   await expect(page.getByText(/доступно только|нет в наличии|остаток/i)).toHaveCount(0);
