@@ -4,11 +4,14 @@ import type { Database } from "@/types/supabase";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const INVITE_FLOW_KEY = "tehno-center-invite-flow";
+const PASSWORD_RECOVERY_FLOW_KEY = "tehno-center-password-recovery-flow";
 
 if (typeof window !== "undefined") {
   const callback = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   if (callback.get("type") === "invite")
     window.sessionStorage.setItem(INVITE_FLOW_KEY, "1");
+  if (callback.get("type") === "recovery")
+    window.sessionStorage.setItem(PASSWORD_RECOVERY_FLOW_KEY, "1");
 }
 
 if (!supabaseUrl || !supabasePublishableKey) {
@@ -39,3 +42,8 @@ export const hasPendingInvite = () =>
   window.sessionStorage.getItem(INVITE_FLOW_KEY) === "1";
 export const clearPendingInvite = () =>
   window.sessionStorage.removeItem(INVITE_FLOW_KEY);
+export const hasPendingPasswordRecovery = () =>
+  typeof window !== "undefined" &&
+  window.sessionStorage.getItem(PASSWORD_RECOVERY_FLOW_KEY) === "1";
+export const clearPendingPasswordRecovery = () =>
+  window.sessionStorage.removeItem(PASSWORD_RECOVERY_FLOW_KEY);

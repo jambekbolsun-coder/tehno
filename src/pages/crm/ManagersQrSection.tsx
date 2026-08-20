@@ -31,6 +31,15 @@ export function ManagersQrSection() {
     reset();
   };
 
+  const openInvite = (manager?: { name: string; phone?: string }) => {
+    reset();
+    if (manager) {
+      setFullName(manager.name);
+      setPhone(manager.phone || "+996 ");
+    }
+    setOpen(true);
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setCreating(true);
@@ -58,7 +67,7 @@ export function ManagersQrSection() {
         title="Менеджеры"
         text="Создавайте доступ без email: ФИО + телефон → одноразовый QR → пароль → рабочее место."
         actions={
-          <Button icon={<UserPlus size={17} />} onClick={() => setOpen(true)}>
+          <Button icon={<UserPlus size={17} />} onClick={() => openInvite()}>
             Добавить менеджера
           </Button>
         }
@@ -100,6 +109,15 @@ export function ManagersQrSection() {
                 <span><Power size={14} /> Принимать заявки</span>
               </label>
               <button
+                type="button"
+                className="manager-reinvite"
+                onClick={() => openInvite(manager)}
+                title="Создать новый QR для входа или восстановления доступа"
+              >
+                <QrCode size={16} /> Новый QR
+              </button>
+              <button
+                type="button"
                 className="danger"
                 disabled={loading}
                 onClick={() => {
@@ -142,7 +160,7 @@ export function ManagersQrSection() {
                 required
               />
             </div>
-            <p className="form-hint">Email не нужен. После создания покажите QR менеджеру или отправьте ему ссылку.</p>
+            <p className="form-hint">Email не нужен. Новый QR также можно использовать для безопасного восстановления доступа существующего менеджера.</p>
             <footer className="modal-form-actions">
               <Button type="button" variant="ghost" onClick={close}>Отмена</Button>
               <Button type="submit" icon={<QrCode size={17} />} disabled={creating}>

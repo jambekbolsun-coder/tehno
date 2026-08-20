@@ -68,6 +68,10 @@
 .profile-password-input button { width: 34px; height: 34px; position: absolute; top: 50%; right: 6px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--crm-muted); transform: translateY(-50%); }
 .profile-password-input button:hover { background: var(--crm-bg); color: var(--crm-text); }
 
+.manager-card > footer { flex-wrap: wrap; gap: 8px 12px; }
+.manager-card footer > .manager-reinvite { min-height: 30px; padding: 0 9px; border: 1px solid var(--crm-border); border-radius: 8px; background: var(--crm-bg); color: #4f67e8; font-weight: 750; }
+.manager-card footer > .manager-reinvite:hover { border-color: #abb8f2; background: #eef2ff; }
+
 :root[data-theme="dark"] .manager-card__money,:root[data-theme="dark"] .ai-local-badge,:root[data-theme="dark"] .kanban-hint,:root[data-theme="dark"] .finance-note,:root[data-theme="dark"] .settings-alert { filter: brightness(.72); }
 
 .notification-actions { display:flex;align-items:center;gap:9px; }

@@ -5,7 +5,7 @@ import { ToastRegion } from "@/components/ui/Toast";
 import { CrmLayout } from "@/layouts/CrmLayout";
 import { PublicLayout } from "@/layouts/PublicLayout";
 import { analyticsService } from "@/services/AnalyticsService";
-import { hasPendingInvite } from "@/lib/supabase";
+import { hasPendingInvite, hasPendingPasswordRecovery } from "@/lib/supabase";
 import { useAppStore } from "@/stores/useAppStore";
 
 const HomePage = lazy(() => import("@/pages/public/HomePage"));
@@ -22,6 +22,8 @@ const NotFoundPage = lazy(() => import("@/pages/public/NotFoundPage"));
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const InvitePage = lazy(() => import("@/pages/auth/InvitePage"));
 const ManagerJoinPage = lazy(() => import("@/pages/auth/ManagerJoinPage"));
+const ForgotPasswordPage = lazy(() => import("@/pages/auth/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("@/pages/auth/ResetPasswordPage"));
 const CrmPortal = lazy(() => import("@/pages/crm/CrmPortal"));
 
 function AppEffects() {
@@ -34,7 +36,9 @@ function AppEffects() {
   }, [theme, language]);
   useEffect(() => { analyticsService.track("site_visit", { entry: window.location.hash || "#/" }); }, []);
   useEffect(() => {
-    if (hasPendingInvite() && window.location.hash !== "#/invite")
+    if (hasPendingPasswordRecovery() && window.location.hash !== "#/reset-password")
+      window.location.hash = "#/reset-password";
+    else if (hasPendingInvite() && window.location.hash !== "#/invite")
       window.location.hash = "#/invite";
   }, []);
   return null;
@@ -68,6 +72,8 @@ export default function App() {
             <Route path="*" element={<NotFoundPage/>}/>
           </Route>
           <Route path="/login" element={<LoginPage/>}/>
+          <Route path="/forgot-password" element={<ForgotPasswordPage/>}/>
+          <Route path="/reset-password" element={<ResetPasswordPage/>}/>
           <Route path="/invite" element={<InvitePage/>}/>
           <Route path="/manager/join" element={<ManagerJoinPage/>}/>
           <Route element={<RouteGuard role="admin"/>}>
