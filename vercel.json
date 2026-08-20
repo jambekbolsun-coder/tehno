@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/crm/admin",
+      "destination": "/#/crm/admin",
+      "permanent": false
+    },
+    {
+      "source": "/admin",
+      "destination": "/#/admin",
+      "permanent": false
+    },
+    {
+      "source": "/crm/manager",
+      "destination": "/#/crm/manager",
+      "permanent": false
+    }
+  ]
+}
