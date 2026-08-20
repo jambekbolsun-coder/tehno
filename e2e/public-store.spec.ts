@@ -17,14 +17,22 @@ const waitForProducts = async (page: Page) => {
   return cards;
 };
 
-test("главная открывает мобильную витрину с адаптивной каруселью и живыми товарами", async ({ page }) => {
+test("главная открывает качественную перелистываемую витрину и живые товары", async ({ page }) => {
   await page.goto("/#/");
   await expect(page.locator(".market-banner-carousel")).toBeVisible();
   await expect(page.locator(".market-banner")).toHaveCount(4);
-  await expect(page.locator(".market-banner picture")).toHaveCount(4);
-  await expect(page.locator(".market-banner source[media='(max-width: 640px)']")).toHaveCount(4);
-  await expect(page.locator(".market-banner source[media='(max-width: 1100px)']")).toHaveCount(4);
+  await expect(page.locator(".market-banner--atlas")).toHaveCount(4);
+  await expect(page.getByRole("button", { name: "Предыдущий баннер" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Следующий баннер" })).toBeVisible();
+  await page.getByRole("button", { name: "Следующий баннер" }).click();
+  await expect(page.locator(".market-banner").nth(1)).toHaveClass(/is-active/);
   await expect(page.getByText(/тестовый товар/i)).toHaveCount(0);
+});
+
+test("главная не рисует большой дублирующий блок Каталог", async ({ page }) => {
+  await page.goto("/#/");
+  await expect(page.locator(".market-category-block")).toHaveCount(0);
+  await expect(page.locator(".market-catalog-preview--flat")).toBeVisible();
 });
 
 test("витрина не показывает покупателю складские остатки", async ({ page }) => {
@@ -41,6 +49,20 @@ test("каталог показывает только компактный по
   await expect(page.locator(".catalog-sidebar")).toBeHidden();
   await page.locator(".market-filter-trigger").click();
   await expect(page.locator(".market-filter-sheet").last()).toBeVisible();
+});
+
+test("на мобильной карточке видны корзина и Подробнее", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#/");
+  const cards = await waitForProducts(page);
+  test.skip((await cards.count()) === 0, "Каталог пуст");
+  const card = cards.first();
+  await expect(card.locator(".product-cart-button")).toBeVisible();
+  await expect(card.locator(".product-cart-button svg")).toBeVisible();
+  await expect(card.locator(".product-details-button")).toBeVisible();
+  const cartColor = await card.locator(".product-cart-button").evaluate((el) => getComputedStyle(el).color);
+  expect(cartColor).not.toBe("rgba(0, 0, 0, 0)");
 });
 
 test("корзина не ограничивает количество текущим складским остатком", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { Heart, ShoppingCart, Star } from "lucide-react";
+import { Heart, ImageIcon, ShoppingCart, Star } from "lucide-react";
 import type { MouseEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -31,6 +31,7 @@ export function ProductCard({ product }: { product: Product }) {
   const discount = calculateDiscountPercent(price, product.oldPrice);
   const isFavorite = favorites.includes(product.id);
   const detailsPath = `/product/${product.slug}`;
+  const image = product.images[0]?.url;
 
   const add = () => {
     try {
@@ -70,7 +71,21 @@ export function ProductCard({ product }: { product: Product }) {
           <Heart size={19} fill={isFavorite ? "currentColor" : "none"} />
         </button>
         <Link to={detailsPath} aria-label={product.name[language]} onClick={(event) => event.stopPropagation()}>
-          <img src={product.images[0]?.url || "/logo.jpg"} alt={product.name[language]} loading="lazy" width="450" height="450" />
+          {image ? (
+            <img
+              src={image}
+              alt={product.name[language]}
+              loading="lazy"
+              decoding="async"
+              width="600"
+              height="600"
+            />
+          ) : (
+            <span className="product-card__placeholder" aria-hidden="true">
+              <ImageIcon size={34} />
+              <small>Фото скоро</small>
+            </span>
+          )}
         </Link>
       </div>
       <div className="product-card__body">
@@ -94,7 +109,7 @@ export function ProductCard({ product }: { product: Product }) {
             }}
             aria-label={t("addCart")}
           >
-            <ShoppingCart size={18} />
+            <ShoppingCart size={19} />
             <span>{t("addCart")}</span>
           </button>
           <Link
