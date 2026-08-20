@@ -203,8 +203,7 @@
   gap: 6px;
 }
 
-.market-discount-badge,
-.market-installment-badge {
+.market-discount-badge {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
@@ -214,10 +213,8 @@
   font-size: 12px;
   font-weight: 900;
   line-height: 1;
+  background: linear-gradient(135deg, #7c24d8, #a02cf1);
 }
-
-.market-discount-badge { background: linear-gradient(135deg, #7c24d8, #a02cf1); }
-.market-installment-badge { background: linear-gradient(135deg, #ff6a00, #ff8b00); }
 
 .product-cart-button span { display: none; }
 
@@ -313,16 +310,14 @@
   gap: 7px;
 }
 
-.market-product-badges span,
-.market-product-badges b {
+.market-product-badges span {
   padding: 6px 9px;
   border-radius: 9px;
   color: #fff;
   font-size: 12px;
   font-weight: 900;
+  background: #7f2add;
 }
-.market-product-badges span { background: #7f2add; }
-.market-product-badges b { background: var(--market-accent); }
 
 .market-product-gallery-card {
   position: relative;
@@ -362,25 +357,6 @@
   color: var(--market-green);
   font-weight: 800;
 }
-
-.market-seller-card > div {
-  display: grid;
-  grid-template-columns: 48px 1fr auto;
-  align-items: center;
-  gap: 12px;
-}
-
-.market-seller-card img {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid #eceef2;
-}
-
-.market-seller-card span { display: grid; gap: 2px; }
-.market-seller-card small { color: var(--market-muted); }
-.market-seller-card strong { color: var(--market-text); }
 
 @media (min-width: 761px) {
   .market-featured-panel .product-grid {
@@ -425,12 +401,6 @@
     gap: 10px;
     padding-top: 7px;
     padding-bottom: 7px;
-  }
-
-  .site-header--service-ui .logo {
-    min-width: 0;
-    transform: scale(0.92);
-    transform-origin: left center;
   }
 
   .site-header--service-ui .desktop-catalog-link,
@@ -583,8 +553,7 @@
     gap: 4px;
   }
 
-  .market-discount-badge,
-  .market-installment-badge {
+  .market-discount-badge {
     min-height: 21px;
     padding: 3px 6px;
     font-size: 10px;
@@ -894,15 +863,6 @@
     font-size: 13px;
   }
 
-  .market-seller-card > div {
-    grid-template-columns: 44px 1fr auto;
-  }
-
-  .market-seller-card img {
-    width: 44px;
-    height: 44px;
-  }
-
   .market-related-products {
     padding: 0;
     margin-top: 14px;
@@ -978,5 +938,4 @@
   .product-card__body { padding: 8px; }
   .product-card__title { font-size: 12px; }
   .product-card__price-row strong { font-size: 15px; }
-  .product-cart-button span { font-size: 11px; }
 }
