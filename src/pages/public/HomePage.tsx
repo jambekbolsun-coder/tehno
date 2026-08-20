@@ -6,9 +6,34 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
 
 const banners = [
-  { src: "/market-banner-sale.webp", href: "/catalog", label: "Супер скидки на технику" },
-  { src: "/market-banner-installment.webp", href: "/catalog", label: "Рассрочка на технику" },
-  { src: "/market-banner-delivery.webp", href: "/catalog", label: "Доставка техники" },
+  {
+    desktop: "/banners/installment-desktop.avif",
+    tablet: "/banners/installment-tablet.avif",
+    mobile: "/banners/installment-mobile.avif",
+    href: "/catalog",
+    label: "Рассрочка 12 месяцев на все товары",
+  },
+  {
+    desktop: "/banners/gift-desktop.avif",
+    tablet: "/banners/gift-tablet.avif",
+    mobile: "/banners/gift-mobile.avif",
+    href: "/catalog",
+    label: "Купите холодильник — чайник в подарок",
+  },
+  {
+    desktop: "/banners/sale-desktop.avif",
+    tablet: "/banners/sale-tablet.avif",
+    mobile: "/banners/sale-mobile.avif",
+    href: "/catalog",
+    label: "Горячие скидки до 30 процентов",
+  },
+  {
+    desktop: "/banners/address-desktop.avif",
+    tablet: "/banners/address-tablet.avif",
+    mobile: "/banners/address-mobile.avif",
+    href: "/contacts",
+    label: "TEHNO CENTER — Токтогула 236",
+  },
 ];
 
 export default function HomePage() {
@@ -24,7 +49,7 @@ export default function HomePage() {
   useEffect(() => {
     const timer = window.setInterval(
       () => setActiveBanner((value) => (value + 1) % banners.length),
-      4200,
+      5200,
     );
     return () => window.clearInterval(timer);
   }, []);
@@ -61,13 +86,25 @@ export default function HomePage() {
         <div className="market-banner-track">
           {banners.map((banner, index) => (
             <Link
-              key={banner.src}
+              key={banner.desktop}
               to={banner.href}
               className={`market-banner${index === activeBanner ? " is-active" : ""}`}
               aria-hidden={index !== activeBanner}
               tabIndex={index === activeBanner ? 0 : -1}
             >
-              <img src={banner.src} alt={banner.label} />
+              <picture>
+                <source media="(max-width: 640px)" srcSet={banner.mobile} />
+                <source media="(max-width: 1100px)" srcSet={banner.tablet} />
+                <img
+                  src={banner.desktop}
+                  alt={banner.label}
+                  width="2047"
+                  height="639"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : "auto"}
+                  decoding="async"
+                />
+              </picture>
             </Link>
           ))}
         </div>
@@ -75,9 +112,10 @@ export default function HomePage() {
           {banners.map((banner, index) => (
             <button
               type="button"
-              key={banner.src}
+              key={banner.desktop}
               className={index === activeBanner ? "is-active" : ""}
               aria-label={`Баннер ${index + 1}`}
+              aria-current={index === activeBanner ? "true" : undefined}
               onClick={() => setActiveBanner(index)}
             />
           ))}
@@ -126,7 +164,7 @@ export default function HomePage() {
       <section className="market-catalog-preview">
         <div className="market-section-heading">
           <div>
-            <span>TEHNO CENTER 2</span>
+            <span>TEHNO CENTER</span>
             <h2>Популярные товары</h2>
           </div>
           <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>

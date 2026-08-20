@@ -17,10 +17,13 @@ const waitForProducts = async (page: Page) => {
   return cards;
 };
 
-test("главная открывает мобильную витрину с автокаруселью и живыми товарами", async ({ page }) => {
+test("главная открывает мобильную витрину с адаптивной каруселью и живыми товарами", async ({ page }) => {
   await page.goto("/#/");
   await expect(page.locator(".market-banner-carousel")).toBeVisible();
-  await expect(page.locator(".market-banner")).toHaveCount(3);
+  await expect(page.locator(".market-banner")).toHaveCount(4);
+  await expect(page.locator(".market-banner picture")).toHaveCount(4);
+  await expect(page.locator(".market-banner source[media='(max-width: 640px)']")).toHaveCount(4);
+  await expect(page.locator(".market-banner source[media='(max-width: 1100px)']")).toHaveCount(4);
   await expect(page.getByText(/тестовый товар/i)).toHaveCount(0);
 });
 

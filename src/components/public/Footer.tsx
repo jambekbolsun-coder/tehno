@@ -10,7 +10,7 @@ export function Footer() {
       <div className="container compact-footer">
         <div className="compact-footer__brand">
           <Logo inverted />
-          <span>© {new Date().getFullYear()} TEHNO CENTER 2</span>
+          <span>© {new Date().getFullYear()} TEHNO CENTER</span>
         </div>
         <nav className="compact-footer__links" aria-label={t("menu")}>
           <Link to="/catalog">{t("catalog")}</Link>
