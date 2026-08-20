@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
-import { supabase } from "@/lib/supabase";
 import { managerAccessService } from "@/services/ManagerAccessService";
 import { useAppStore } from "@/stores/useAppStore";
 
@@ -11,7 +10,8 @@ export default function ManagerJoinPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const token = useMemo(() => params.get("token")?.trim() ?? "", [params]);
-  const initialize = useAppStore((state) => state.initialize);
+  const login = useAppStore((state) => state.login);
+  const logout = useAppStore((state) => state.logout);
   const [invite, setInvite] = useState<{ full_name: string; phone: string; expires_at: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -50,11 +50,12 @@ export default function ManagerJoinPage() {
     setSaving(true);
     try {
       const redeemed = await managerAccessService.redeem(token, password);
-      const signedIn = await supabase.auth.signInWithPassword({ phone: redeemed.phone, password });
-      if (signedIn.error) throw signedIn.error;
-      await initialize();
+      const session = await login(redeemed.loginEmail, password);
+      if (session.role !== "manager") {
+        await logout();
+        throw new Error("Рабочее место менеджера не найдено");
+      }
       navigate("/crm/manager/dashboard", { replace: true });
-      window.location.reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Не удалось активировать рабочее место");
     } finally {
@@ -103,6 +104,8 @@ export default function ManagerJoinPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete="new-password"
+                  aria-invalid={Boolean(error)}
+                  aria-describedby={error ? "manager-join-error" : undefined}
                   minLength={8}
                   required
                   autoFocus
@@ -120,11 +123,13 @@ export default function ManagerJoinPage() {
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 autoComplete="new-password"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "manager-join-error" : undefined}
                 minLength={8}
                 required
               />
             </div>
-            {error && <div className="login-error" role="alert"><ShieldAlert size={17} />{error}</div>}
+            {error && <div id="manager-join-error" className="login-error" role="alert"><ShieldAlert size={17} />{error}</div>}
             <Button type="submit" block size="lg" disabled={saving}>{saving ? "Активируем…" : "Создать пароль и войти"}</Button>
           </form>
         )}

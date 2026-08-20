@@ -4,27 +4,21 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/ui/Logo";
 import { useTranslation } from "@/hooks/useTranslation";
-import { supabase } from "@/lib/supabase";
+import { getManagerAuthEmail, normalizeManagerPhone } from "@/lib/managerAuth";
 import { useAppStore } from "@/stores/useAppStore";
-
-const normalizePhone = (value: string) => {
-  let digits = value.replace(/\D/g, "");
-  if (digits.startsWith("0")) digits = `996${digits.slice(1)}`;
-  if (digits.length === 9) digits = `996${digits}`;
-  return digits ? `+${digits}` : "";
-};
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const login = useAppStore((state) => state.login);
+  const logout = useAppStore((state) => state.logout);
   const loading = useAppStore((state) => state.loading);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [phoneLoading, setPhoneLoading] = useState(false);
   const [error, setError] = useState("");
+  const passwordWasReset = Boolean((location.state as { passwordReset?: boolean } | null)?.passwordReset);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -43,26 +37,26 @@ export default function LoginPage() {
         return;
       }
 
-      const phone = normalizePhone(value);
-      if (phone.replace(/\D/g, "").length < 11) throw new Error("Введите корректный номер телефона");
-      setPhoneLoading(true);
-      const signedIn = await supabase.auth.signInWithPassword({ phone, password });
-      if (signedIn.error || !signedIn.data.user) throw new Error("Неверный номер телефона или пароль");
-      const profile = await supabase.from("profiles").select("role,is_active").eq("id", signedIn.data.user.id).single();
-      if (profile.error || !profile.data?.is_active || profile.data.role !== "manager") {
-        await supabase.auth.signOut();
-        throw new Error("Учётная запись менеджера отключена управляющим");
+      const phone = normalizeManagerPhone(value).e164;
+      const email = getManagerAuthEmail(phone);
+      try {
+        const session = await login(email, password);
+        if (session.role !== "manager") {
+          await logout();
+          throw new Error("Этот номер не связан с рабочим местом менеджера");
+        }
+        navigate("/crm/manager/dashboard", { replace: true });
+      } catch (cause) {
+        if (cause instanceof Error && /активирован|отключен|рабочим местом/.test(cause.message))
+          throw cause;
+        throw new Error("Неверный номер телефона или пароль");
       }
-      window.location.hash = "#/crm/manager/dashboard";
-      window.location.reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Ошибка входа");
-    } finally {
-      setPhoneLoading(false);
     }
   };
 
-  const busy = loading || phoneLoading;
+  const busy = loading;
 
   return (
     <div className="login-page">
@@ -87,6 +81,7 @@ export default function LoginPage() {
           <span className="eyebrow">TEHNO OPERATIONS</span>
           <h2>{t("login")}</h2>
           <p>Управляющий: email. Менеджер: номер телефона.</p>
+          {passwordWasReset && <div className="login-success" role="status">Пароль изменён. Теперь войдите с новым паролем.</div>}
           <div className="field">
             <label htmlFor="login-identifier">Email или номер телефона</label>
             <input
@@ -96,18 +91,23 @@ export default function LoginPage() {
               onChange={(event) => setIdentifier(event.target.value)}
               placeholder="admin@mail.com или +996 700 123 456"
               autoComplete="username"
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "login-error" : undefined}
               required
               autoFocus
             />
           </div>
           <div className="field">
-            <label htmlFor="login-password">{t("password")}</label>
+            <div className="field-label-row">
+              <label htmlFor="login-password">{t("password")}</label>
+              <Link to="/forgot-password">Забыли пароль?</Link>
+            </div>
             <div className="password-input">
-              <input id="login-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required/>
+              <input id="login-password" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" aria-invalid={Boolean(error)} aria-describedby={error ? "login-error" : undefined} required/>
               <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}</button>
             </div>
           </div>
-          {error && <div className="login-error" role="alert"><ShieldAlert size={17}/>{error}</div>}
+          {error && <div id="login-error" className="login-error" role="alert"><ShieldAlert size={17}/>{error}</div>}
           <Button type="submit" block size="lg" disabled={busy}>{busy ? "Вход…" : t("signIn")}</Button>
         </form>
       </main>
