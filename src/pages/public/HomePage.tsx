@@ -1,15 +1,15 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ProductGrid } from "@/components/public/ProductGrid";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
 
 const banners = [
-  { href: "/catalog", label: "Рассрочка 12 месяцев на все товары" },
-  { href: "/catalog", label: "Купите холодильник — чайник в подарок" },
-  { href: "/catalog", label: "Горячие скидки до 30 процентов" },
-  { href: "/contacts", label: "TEHNO CENTER — Токтогула 236" },
+  { id: "installment", href: "/catalog", label: "Рассрочка 12 месяцев на все товары" },
+  { id: "gift", href: "/catalog", label: "Купите холодильник — чайник в подарок" },
+  { id: "sale", href: "/catalog", label: "Горячие скидки до 30 процентов" },
+  { id: "address", href: "/contacts", label: "TEHNO CENTER — Токтогула 236" },
 ];
 
 const wrapIndex = (value: number) => (value + banners.length) % banners.length;
@@ -90,12 +90,25 @@ export default function HomePage() {
             <Link
               key={banner.label}
               to={banner.href}
-              className={`market-banner market-banner--atlas${index === activeBanner ? " is-active" : ""}`}
-              style={{ "--banner-y": `${index * 33.333333}%` } as CSSProperties}
+              className={`market-banner${index === activeBanner ? " is-active" : ""}`}
               aria-label={banner.label}
               aria-hidden={index !== activeBanner}
               tabIndex={index === activeBanner ? 0 : -1}
             >
+              <picture>
+                <source media="(min-width: 1101px)" srcSet={`/banners-hq/${banner.id}-desktop.webp`} />
+                <source media="(min-width: 761px)" srcSet={`/banners-hq/${banner.id}-tablet.webp`} />
+                <img
+                  src={`/banners-hq/${banner.id}-mobile.webp`}
+                  alt=""
+                  width="1639"
+                  height="960"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : "auto"}
+                  decoding="async"
+                  draggable="false"
+                />
+              </picture>
               <span className="sr-only">{banner.label}</span>
             </Link>
           ))}

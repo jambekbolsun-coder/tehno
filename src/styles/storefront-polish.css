@@ -1,0 +1,582 @@
+/* Storefront presentation layer. Kept last to replace legacy visual overrides
+   without changing catalog, checkout, CRM, or Supabase behavior. */
+
+.public-app {
+  --store-primary: #128253;
+  --store-primary-strong: #09643e;
+  --store-primary-soft: #e7f6ee;
+  --store-ink: #111722;
+  --store-copy: #343d4b;
+  --store-muted: #667181;
+  --store-line: #dfe4e8;
+  --store-panel: #ffffff;
+  --store-page: #f4f6f7;
+  --store-shadow-sm: 0 8px 24px rgba(20, 31, 43, .07);
+  --store-shadow-md: 0 18px 44px rgba(20, 31, 43, .12);
+  --store-ease: cubic-bezier(.22, 1, .36, 1);
+  background:
+    radial-gradient(circle at 5% -5%, rgba(18, 130, 83, .08), transparent 28rem),
+    var(--store-page);
+  color: var(--store-ink);
+}
+
+:root[data-theme="dark"] .public-app {
+  --store-primary: #45cc8b;
+  --store-primary-strong: #75e4aa;
+  --store-primary-soft: #163a2b;
+  --store-ink: #f5f8fa;
+  --store-copy: #d7dde3;
+  --store-muted: #a9b2bd;
+  --store-line: #353d46;
+  --store-panel: #1a2027;
+  --store-page: #11161c;
+  --store-shadow-sm: 0 8px 24px rgba(0, 0, 0, .22);
+  --store-shadow-md: 0 18px 44px rgba(0, 0, 0, .34);
+}
+
+.public-app :where(p, li, dd, .product-card__model, .product-rating, .breadcrumbs) {
+  color: var(--store-copy);
+}
+
+.public-app :where(a, button, input, select, textarea) {
+  transition-duration: 220ms;
+  transition-timing-function: var(--store-ease);
+}
+
+.public-app :where(a, button):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--store-primary) 48%, white);
+  outline-offset: 3px;
+}
+
+/* Crisp text-only brand. */
+.public-app .brand-wordmark {
+  width: auto !important;
+  min-width: max-content;
+  display: inline-flex;
+  align-items: baseline;
+  gap: .34em;
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none !important;
+  color: var(--store-ink);
+  font-size: clamp(1.05rem, 1.45vw, 1.42rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.055em;
+  white-space: nowrap;
+}
+
+.public-app .brand-wordmark__center { color: var(--store-primary); }
+.public-app .brand-wordmark--compact { font-size: 1rem; }
+.public-app .brand-wordmark--inverted { color: #fff; }
+.public-app .brand-wordmark--inverted .brand-wordmark__center { color: #74d9a5; }
+
+/* Header alignment. */
+.public-app .site-header--service-ui {
+  height: 78px;
+  border-bottom: 1px solid color-mix(in srgb, var(--store-line) 78%, transparent);
+  background: color-mix(in srgb, var(--store-panel) 91%, transparent);
+  box-shadow: 0 4px 18px rgba(16, 24, 34, .055);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+.public-app .site-header--service-ui .site-header__inner {
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: auto auto minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.public-app .site-header--service-ui .desktop-catalog-link {
+  min-height: 44px;
+  padding-inline: 19px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: var(--store-ink);
+  color: var(--store-panel);
+  box-shadow: 0 8px 18px rgba(17, 23, 34, .14);
+}
+
+.public-app .site-header--service-ui .desktop-catalog-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(17, 23, 34, .2);
+}
+
+.public-app .site-header--service-ui .header-search {
+  width: 100%;
+  max-width: 610px;
+  min-height: 46px;
+  display: flex;
+  margin-inline: 0 auto;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--store-line) 34%, var(--store-panel));
+  color: var(--store-muted);
+}
+
+.public-app .site-header--service-ui .header-search:focus-within {
+  border-color: var(--store-primary);
+  background: var(--store-panel);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--store-primary) 14%, transparent);
+}
+
+.public-app .site-header--service-ui .icon-button,
+.public-app .language-switcher__button {
+  border-color: var(--store-line);
+  background: var(--store-panel);
+  color: var(--store-ink);
+  box-shadow: 0 3px 10px rgba(18, 26, 36, .04);
+}
+
+.public-app .site-header--service-ui .icon-button:hover,
+.public-app .language-switcher__button:hover {
+  border-color: color-mix(in srgb, var(--store-primary) 45%, var(--store-line));
+  background: var(--store-primary-soft);
+  color: var(--store-primary-strong);
+  transform: translateY(-2px);
+}
+
+/* Original campaign artwork, selected by viewport in HomePage.tsx. */
+.public-app .market-home { gap: 26px; }
+.public-app .market-home.page-space { padding-top: 24px; }
+.public-app .market-banner-carousel {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--store-line) 70%, transparent);
+  border-radius: 22px;
+  background: #07163e;
+  box-shadow: var(--store-shadow-md);
+}
+
+.public-app .market-banner-track { aspect-ratio: 2244 / 701; }
+.public-app .market-banner {
+  display: block;
+  opacity: 0;
+  transform: scale(1.012);
+  transition: opacity 460ms ease, transform 900ms var(--store-ease);
+}
+
+.public-app .market-banner.is-active { opacity: 1; transform: scale(1); }
+.public-app .market-banner picture,
+.public-app .market-banner img { width: 100%; height: 100%; display: block; }
+.public-app .market-banner img { object-fit: cover; user-select: none; }
+
+.public-app .market-banner-arrow {
+  width: 48px;
+  height: 48px;
+  border-color: rgba(255, 255, 255, .62);
+  background: rgba(9, 14, 23, .38);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
+}
+
+.public-app .market-banner-arrow:hover {
+  background: rgba(9, 14, 23, .72);
+  transform: translateY(-50%) scale(1.07);
+}
+
+.public-app .market-banner-dots { bottom: 12px; }
+.public-app .market-banner-dots button { min-width: 8px; }
+
+/* Category rail and headings. */
+.public-app .market-category-pills a {
+  min-height: 44px;
+  border-color: var(--store-line);
+  background: var(--store-panel);
+  color: var(--store-copy);
+  box-shadow: var(--store-shadow-sm);
+}
+
+.public-app .market-category-pills a:hover {
+  border-color: color-mix(in srgb, var(--store-primary) 50%, var(--store-line));
+  background: var(--store-primary-soft);
+  color: var(--store-primary-strong);
+  transform: translateY(-2px);
+}
+
+.public-app .market-category-pills a.is-primary {
+  border-color: var(--store-ink);
+  background: var(--store-ink);
+  color: var(--store-panel);
+}
+
+.public-app .market-section-heading--compact h1,
+.public-app .market-section-heading--compact h2 {
+  color: var(--store-ink);
+  font-size: clamp(1.55rem, 2.25vw, 2rem);
+  line-height: 1.08;
+}
+
+.public-app .market-section-heading--compact > a,
+.public-app .market-heading-actions > a { color: var(--store-primary-strong); }
+
+.public-app .market-section-heading .market-heading-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.public-app .market-heading-actions > button {
+  border-color: var(--store-line);
+  background: var(--store-panel);
+  color: var(--store-ink);
+  box-shadow: 0 5px 14px rgba(18, 26, 36, .07);
+}
+
+.public-app .market-heading-actions > button:hover {
+  border-color: var(--store-primary);
+  background: var(--store-primary-soft);
+  color: var(--store-primary-strong);
+  transform: translateY(-2px);
+}
+
+.public-app .market-featured-strip {
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 86% 0%, rgba(85, 210, 145, .28), transparent 24rem),
+    linear-gradient(135deg, #132238 0%, #1c3550 58%, #25435a 100%);
+  box-shadow: 0 20px 46px rgba(24, 42, 63, .2);
+}
+
+.public-app .market-featured-strip .market-section-heading :where(span, h1),
+.public-app .market-featured-strip .market-heading-actions > a {
+  color: #fff;
+}
+
+.public-app .market-featured-strip .market-heading-actions > button {
+  border-color: rgba(255, 255, 255, .28);
+  background: rgba(255, 255, 255, .94);
+  color: #132238;
+}
+
+/* Product cards: exactly half image and half information. */
+.public-app .market-catalog-preview--flat > .product-grid,
+.public-app .catalog-page--market-v2 .catalog-results > .product-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 22px 16px;
+}
+
+.public-app .market-product-rail .product-grid { grid-auto-columns: 250px; gap: 16px; }
+.public-app .market-product-rail .product-card { width: 250px; }
+
+.public-app .product-card {
+  width: 100%;
+  min-width: 0;
+  display: grid !important;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  aspect-ratio: 3 / 5;
+  overflow: hidden !important;
+  border: 1px solid var(--store-line) !important;
+  border-radius: 20px !important;
+  background: var(--store-panel) !important;
+  box-shadow: var(--store-shadow-sm) !important;
+  transform: translateZ(0);
+  transition: border-color 260ms ease, box-shadow 260ms var(--store-ease), transform 260ms var(--store-ease);
+}
+
+@media (hover: hover) {
+  .public-app .product-card--clickable:hover {
+    border-color: color-mix(in srgb, var(--store-primary) 42%, var(--store-line)) !important;
+    box-shadow: var(--store-shadow-md) !important;
+    transform: translateY(-7px);
+  }
+}
+
+.public-app .product-card__media {
+  min-height: 0;
+  aspect-ratio: auto;
+  overflow: hidden;
+  border: 0;
+  border-bottom: 1px solid var(--store-line);
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 50% 45%, #fff 0, #f7f9fa 64%, #eef2f4 100%) !important;
+  box-shadow: none;
+}
+
+.public-app .product-card__media > a { width: 100%; height: 100%; display: grid; place-items: center; }
+.public-app .product-card__media img {
+  width: 100% !important;
+  height: 100% !important;
+  padding: clamp(6px, 4%, 13px);
+  object-fit: contain !important;
+  object-position: center;
+  mix-blend-mode: normal !important;
+  transform: scale(.98) !important;
+  transition: transform 420ms var(--store-ease) !important;
+}
+
+@media (hover: hover) {
+  .public-app .product-card:hover .product-card__media img { transform: scale(1.035) !important; }
+}
+
+.public-app .favorite-button {
+  border: 1px solid rgba(17, 23, 34, .08) !important;
+  background: rgba(255, 255, 255, .94) !important;
+  color: #303846;
+  box-shadow: 0 6px 18px rgba(20, 31, 43, .12);
+  backdrop-filter: blur(8px);
+}
+
+.public-app .favorite-button:hover { color: #e7335e; transform: scale(1.06); }
+.public-app .favorite-button.is-active { color: #e7335e; }
+
+.public-app .product-card__body {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 13px !important;
+  background: var(--store-panel);
+}
+
+.public-app .product-card__meta {
+  min-height: 17px;
+  color: var(--store-muted);
+  font-size: .66rem !important;
+}
+
+.public-app .product-card__title {
+  min-height: 0 !important;
+  display: block;
+  margin: 5px 0 2px !important;
+  overflow: visible;
+  color: var(--store-ink);
+  font-size: .86rem !important;
+  font-weight: 780 !important;
+  line-height: 1.3 !important;
+  -webkit-line-clamp: unset;
+}
+
+.public-app .product-card__model {
+  display: block;
+  overflow: visible;
+  color: var(--store-muted) !important;
+  font-size: .66rem !important;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+
+.public-app .product-card__price-row { margin-top: auto; padding-top: 7px; }
+.public-app .product-card__price-row strong {
+  color: var(--store-ink);
+  font-size: 1.15rem !important;
+  font-weight: 900;
+}
+.public-app .product-card__price-row del { color: var(--store-muted); font-size: .68rem; }
+.public-app .product-card__deadline { color: var(--store-muted); }
+
+.public-app .product-card__footer {
+  width: 100%;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 44px !important;
+  gap: 8px;
+  margin-top: 9px;
+  padding-top: 0;
+  border: 0;
+}
+
+.public-app .product-details-button {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 44px;
+  border: 1px solid var(--store-ink);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #111722, #263243);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(17, 23, 34, .16);
+  font-size: .76rem;
+  font-weight: 850;
+}
+
+.public-app .product-details-button:hover {
+  border-color: var(--store-primary-strong);
+  background: linear-gradient(135deg, var(--store-primary-strong), var(--store-primary));
+  color: #fff;
+  box-shadow: 0 11px 24px color-mix(in srgb, var(--store-primary) 26%, transparent);
+  transform: translateY(-2px);
+}
+
+.public-app .product-cart-button {
+  grid-column: 2;
+  grid-row: 1;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, var(--store-primary), var(--store-primary-strong)) !important;
+  box-shadow: 0 9px 20px color-mix(in srgb, var(--store-primary) 27%, transparent);
+}
+
+.public-app .product-cart-button:hover {
+  filter: saturate(1.08) brightness(1.05);
+  transform: translateY(-2px) rotate(-2deg);
+}
+
+/* Shared controls and cards. */
+.public-app .button {
+  border-radius: 13px;
+  box-shadow: 0 7px 18px rgba(20, 31, 43, .08);
+}
+
+.public-app .button:hover:not(:disabled) { transform: translateY(-2px); }
+.public-app .button--primary {
+  background: linear-gradient(135deg, var(--store-primary), var(--store-primary-strong));
+  color: #fff;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--store-primary) 26%, transparent);
+}
+
+.public-app :where(.cart-item, .order-summary, .installment-calculator, .checkout-form > section, .checkout-products, .contact-card, .faq-item, .about-values article, .website-discount, .empty-state) {
+  border-color: var(--store-line) !important;
+  background: var(--store-panel);
+  color: var(--store-ink);
+  box-shadow: var(--store-shadow-sm);
+}
+
+/* Product page: large, centered product and stable button placement. */
+.public-app .market-product-detail {
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+  align-items: stretch;
+  gap: 24px;
+}
+
+.public-app .market-product-gallery-card,
+.public-app .market-product-info-card,
+.public-app .market-product-card,
+.public-app .market-specifications-card {
+  border: 1px solid var(--store-line);
+  background: var(--store-panel);
+  color: var(--store-ink);
+  box-shadow: var(--store-shadow-sm);
+}
+
+.public-app .market-product-gallery-card { min-height: 590px; }
+.public-app .market-product-gallery-card .product-swipe-gallery,
+.public-app .market-product-gallery-card .product-swipe-gallery__viewport,
+.public-app .market-product-gallery-card .product-swipe-gallery__slide { height: 100%; min-height: 540px; }
+.public-app .market-product-gallery-card .product-swipe-gallery__slide img {
+  width: 100%;
+  height: 100%;
+  padding: clamp(10px, 3vw, 34px);
+  object-fit: contain;
+}
+
+.public-app .market-product-info-card { display: flex; flex-direction: column; }
+.public-app .market-product-info-card h1 { color: var(--store-ink); }
+.public-app .market-product-info-card .product-price strong { color: var(--store-ink); }
+.public-app .market-product-info-card .product-buy-row,
+.public-app .market-product-info-card .product-actions-secondary { width: 100%; }
+.public-app .market-product-info-card .product-actions-secondary { grid-template-columns: 1fr 1fr; }
+
+.public-app .compact-footer .brand-wordmark { font-size: 1.18rem; }
+
+@media (max-width: 1100px) {
+  .public-app .market-banner-track { aspect-ratio: 1881 / 836; }
+  .public-app .market-catalog-preview--flat > .product-grid,
+  .public-app .catalog-page--market-v2 .catalog-results > .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .public-app .market-product-rail .product-grid { grid-auto-columns: 230px; }
+  .public-app .market-product-rail .product-card { width: 230px; }
+}
+
+@media (max-width: 900px) {
+  .public-app .site-header--service-ui { height: auto; }
+  .public-app .site-header--service-ui .desktop-catalog-link { display: none; }
+  .public-app .site-header--service-ui .site-header__inner {
+    min-height: 66px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 9px;
+  }
+  .public-app .brand-wordmark { font-size: 1.05rem; }
+  .public-app .market-product-detail { display: block; }
+  .public-app .market-product-gallery-card { min-height: 500px; }
+}
+
+@media (max-width: 760px) {
+  .public-app .market-banner-track { aspect-ratio: 1639 / 960; }
+  .public-app .market-banner-carousel { border-radius: 16px; }
+  .public-app .market-banner-arrow { width: 38px; height: 38px; }
+  .public-app .market-banner-arrow--left { left: 8px; }
+  .public-app .market-banner-arrow--right { right: 8px; }
+
+  .public-app .market-featured-strip { padding: 16px 10px 14px; border-radius: 19px; }
+  .public-app .market-product-rail .product-grid { grid-auto-columns: min(250px, 68vw); }
+  .public-app .market-product-rail .product-card { width: auto; }
+
+  .public-app .market-catalog-preview--flat > .product-grid,
+  .public-app .catalog-page--market-v2 .catalog-results > .product-grid,
+  .public-app .market-related-products .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px 9px !important;
+  }
+
+  .public-app .product-card { border-radius: 16px !important; }
+  .public-app .product-card__body { padding: 10px !important; }
+  .public-app .product-card__title { font-size: .75rem !important; }
+  .public-app .product-card__model { font-size: .58rem !important; }
+  .public-app .product-card__price-row { padding-top: 4px; }
+  .public-app .product-card__price-row strong { font-size: .96rem !important; }
+  .public-app .product-card__footer { grid-template-columns: minmax(0, 1fr) 39px !important; gap: 6px; margin-top: 6px; }
+  .public-app .product-details-button { min-height: 39px; padding-inline: 7px; font-size: .67rem; }
+  .public-app .product-cart-button {
+    width: 39px !important;
+    min-width: 39px !important;
+    max-width: 39px !important;
+    height: 39px !important;
+  }
+
+  .public-app--product .market-product-gallery-card { min-height: 48dvh; }
+  .public-app--product .market-product-gallery-card .product-swipe-gallery,
+  .public-app--product .market-product-gallery-card .product-swipe-gallery__viewport,
+  .public-app--product .market-product-gallery-card .product-swipe-gallery__slide { min-height: 46dvh; }
+  .public-app--product .market-product-info-card { min-height: 50dvh; }
+  .public-app .market-product-info-card .product-actions-secondary { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .public-app .site-header--service-ui .site-header__inner {
+    min-height: 112px !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 54px 48px;
+    padding-block: 5px 8px;
+  }
+  .public-app .site-header--service-ui .brand-wordmark { grid-column: 1; grid-row: 1; }
+  .public-app .site-header--service-ui .header-actions { grid-column: 2; grid-row: 1; }
+  .public-app .site-header--service-ui .header-search { grid-column: 1 / -1; grid-row: 2; min-height: 46px; }
+  .public-app .site-header--service-ui .burger-button { display: grid; }
+  .public-app .site-header--service-ui .header-actions .badge-button:first-of-type { display: none !important; }
+  .public-app .site-header--service-ui .header-actions .badge-button:last-of-type { display: grid !important; }
+  .public-app .market-home.page-space { padding-top: 10px; }
+}
+
+@media (max-width: 370px) {
+  .public-app .product-card__body { padding: 8px !important; }
+  .public-app .product-card__meta { min-height: 14px; font-size: .56rem !important; }
+  .public-app .product-card__title { font-size: .69rem !important; }
+  .public-app .product-card__model { font-size: .54rem !important; }
+  .public-app .product-card__price-row strong { font-size: .86rem !important; }
+  .public-app .product-card__footer { grid-template-columns: minmax(0, 1fr) 36px !important; }
+  .public-app .product-details-button { min-height: 36px; }
+  .public-app .product-cart-button {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    height: 36px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-app .market-banner,
+  .public-app .product-card,
+  .public-app .product-card__media img,
+  .public-app :where(a, button) { transition: none !important; }
+  .public-app .product-card:hover,
+  .public-app :where(a, button):hover { transform: none !important; }
+}
