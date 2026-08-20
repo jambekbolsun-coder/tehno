@@ -17,7 +17,7 @@ import { LanguageSwitcher } from "@/components/public/LanguageSwitcher";
 function StorefrontLogo() {
   return (
     <Link to="/" className="storefront-logo" aria-label="TEHNO CENTER — главная">
-      <img src="/tehno-center-logo.webp" alt="TEHNO CENTER" />
+      <img src="/tehno-center-logo.avif" alt="TEHNO CENTER" />
     </Link>
   );
 }
