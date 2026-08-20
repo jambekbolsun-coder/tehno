@@ -1,43 +1,237 @@
+/* Final storefront overrides for responsive banners, product actions and supplied TEHNO CENTER logo. */
+
+.public-app .brand-logo--image {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: clamp(176px, 16vw, 220px);
+  min-width: 0;
+  line-height: 0;
+}
+
+.public-app .brand-logo--image .brand-logo__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 64px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.public-app .compact-footer .brand-logo--image {
+  width: 184px;
+}
+
+.market-banner-track {
+  aspect-ratio: 2047 / 639;
+}
+
+.market-banner picture,
+.market-banner img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.market-banner img {
+  object-fit: cover;
+}
+
+.product-card--clickable {
+  cursor: pointer;
+}
+
+.product-card__footer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.product-details-button {
+  min-width: 0;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid #bcebd1;
+  border-radius: 11px;
+  background: #e2f7eb;
+  color: #118452;
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.product-details-button:hover {
+  border-color: #93deb6;
+  background: #d2f2e0;
+  color: #0d7346;
+}
+
+.product-details-button:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .product-card--clickable:hover .product-details-button {
+    border-color: #93deb6;
+    background: #d8f5e5;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .market-banner-track {
+    aspect-ratio: 1881 / 836;
+  }
+
+  .public-app .brand-logo--image {
+    width: 180px;
+  }
+}
+
 @media (max-width: 760px) {
-  .public-app--catalog .site-header--service-ui .header-search {
-    display: none !important;
+  html {
+    scroll-padding-top: 12px;
   }
 
-  .public-app--catalog .site-header--service-ui .site-header__inner {
-    min-height: 72px;
-    grid-template-rows: auto;
+  html,
+  body {
+    overscroll-behavior-y: auto;
   }
 
-  .public-app--product .site-header--service-ui {
-    display: none !important;
+  body,
+  #root,
+  .public-app {
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .public-app {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .site-header--service-ui {
+    height: auto !important;
+  }
+
+  .site-header--service-ui .site-header__inner {
+    min-height: 0 !important;
+  }
+
+  .site-header--service-ui .brand-logo--image {
+    width: clamp(156px, 48vw, 184px);
+    transform: none !important;
+  }
+
+  .site-header--service-ui .brand-logo--image .brand-logo__image {
+    max-height: 58px;
+    border-radius: 7px;
+  }
+
+  .mobile-drawer .brand-logo--image {
+    width: 192px;
+  }
+
+  .compact-footer .brand-logo--image {
+    width: 176px;
+  }
+
+  .market-banner-carousel {
+    border-radius: 14px;
+  }
+
+  .market-banner-track {
+    aspect-ratio: 1639 / 960;
+  }
+
+  .market-banner img {
+    object-fit: cover;
+  }
+
+  .market-banner-dots {
+    bottom: 7px;
+    gap: 6px;
+    padding: 5px 7px;
+  }
+
+  .market-banner-dots button {
+    width: 7px;
+    height: 7px;
+  }
+
+  .market-banner-dots button.is-active {
+    width: 22px;
+  }
+
+  .market-category-rail,
+  .catalog-category-rail {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-inline: contain;
+    touch-action: pan-x;
+  }
+
+  .market-home,
+  .catalog-page--market-v2 {
+    overscroll-behavior-y: auto;
+  }
+
+  .product-card {
+    contain: layout paint;
   }
 
   .product-card__footer {
-    display: block !important;
+    display: grid !important;
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+    align-items: stretch;
+    gap: 7px;
     width: 100% !important;
     min-width: 0 !important;
   }
 
   .product-cart-button {
-    display: flex !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-    padding: 0 6px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 42px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px !important;
+    overflow: visible !important;
   }
 
   .product-cart-button span {
-    display: block !important;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: none !important;
   }
 
-  .whatsapp-fab {
-    display: none !important;
+  .product-details-button {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 10px;
+    border-radius: 11px;
+    font-size: 12px;
+  }
+
+  .product-card__body {
+    min-width: 0;
+  }
+
+  .product-card__title,
+  .product-card__model,
+  .product-card__price-row {
+    min-width: 0;
+  }
+
+  .product-card__title {
+    overflow-wrap: anywhere;
   }
 
   .market-featured-panel .market-section-heading > a {
@@ -56,7 +250,24 @@
     max-width: 220px;
   }
 
+  .public-app--catalog .site-header--service-ui .header-search {
+    display: none !important;
+  }
+
+  .public-app--catalog .site-header--service-ui .site-header__inner {
+    min-height: 72px;
+    grid-template-rows: auto;
+  }
+
+  .public-app--product .site-header--service-ui {
+    display: none !important;
+  }
+
   .public-app--product .product-page--market-v2.page-space {
     padding-top: 8px;
+  }
+
+  .whatsapp-fab {
+    display: none !important;
   }
 }
