@@ -1,5 +1,5 @@
 import { Heart, ShoppingCart, Star } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
 import type { Product, PromotionType } from "@/types/domain";
@@ -17,6 +17,7 @@ const promoKey: Record<PromotionType, "sale" | "promoDiscount" | "cashback" | "g
 };
 
 export function ProductCard({ product }: { product: Product }) {
+  const navigate = useNavigate();
   const { language, t } = useTranslation();
   const favorites = useAppStore((state) => state.favorites);
   const toggleFavorite = useAppStore((state) => state.toggleFavorite);
@@ -28,21 +29,38 @@ export function ProductCard({ product }: { product: Product }) {
   const price = activePromotion?.specialPrice ?? product.salePrice;
   const discount = calculateDiscountPercent(price, product.oldPrice);
   const isFavorite = favorites.includes(product.id);
+  const detailsPath = `/product/${product.slug}`;
+
   const add = () => {
     try {
       addToCart(product.id);
       analyticsService.track("cart_add", { quantity: 1 }, product.id);
+      showToast("Добавлено в корзину", "success");
     } catch (error) {
       showToast(error instanceof Error ? error.message : t("errorGeneric"), "error");
     }
   };
 
+  const openDetails = () => navigate(detailsPath);
+
   return (
-    <article className="product-card">
+    <article
+      className="product-card product-card--clickable"
+      role="link"
+      tabIndex={0}
+      onClick={openDetails}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openDetails();
+        }
+      }}
+      aria-label={`Подробнее: ${product.name[language]}`}
+    >
       <div className="product-card__media">
         <div className="product-card__badges">
           {discount > 0 && <span className="market-discount-badge">-{discount}%</span>}
-          {product.installmentEligible && <span className="market-installment-badge">0·0·12</span>}
           {activePromotion && !discount && (
             <span className={`promo-ribbon promo-ribbon--${activePromotion.type}`}>
               {t(promoKey[activePromotion.type])}
@@ -51,7 +69,8 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         <button
           className={`favorite-button${isFavorite ? " is-active" : ""}`}
-          onClick={() => {
+          onClick={(event) => {
+            event.stopPropagation();
             toggleFavorite(product.id);
             analyticsService.track("favorite_add", {}, product.id);
           }}
@@ -59,7 +78,7 @@ export function ProductCard({ product }: { product: Product }) {
         >
           <Heart size={19} fill={isFavorite ? "currentColor" : "none"} />
         </button>
-        <Link to={`/product/${product.slug}`} aria-label={product.name[language]}>
+        <Link to={detailsPath} aria-label={product.name[language]} onClick={(event) => event.stopPropagation()}>
           <img src={product.images[0]?.url || "/logo.jpg"} alt={product.name[language]} loading="lazy" width="450" height="450" />
         </Link>
       </div>
@@ -68,7 +87,7 @@ export function ProductCard({ product }: { product: Product }) {
           <span>{product.brand}</span>
           {product.rating && <span><Star size={13} fill="currentColor" />{product.rating}</span>}
         </div>
-        <Link to={`/product/${product.slug}`} className="product-card__title">{product.name[language]}</Link>
+        <Link to={detailsPath} className="product-card__title" onClick={(event) => event.stopPropagation()}>{product.name[language]}</Link>
         <span className="product-card__model">{product.model}</span>
         <div className="product-card__price-row">
           <strong>{formatMoney(price)}</strong>
@@ -76,10 +95,24 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
         {activePromotion?.endAt && <span className="product-card__deadline">{t("until")} {formatDate(activePromotion.endAt)}</span>}
         <div className="product-card__footer">
-          <button className="product-cart-button" onClick={add} aria-label={t("addCart")}>
+          <button
+            className="product-cart-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              add();
+            }}
+            aria-label={t("addCart")}
+          >
             <ShoppingCart size={18} />
             <span>{t("addCart")}</span>
           </button>
+          <Link
+            to={detailsPath}
+            className="product-details-button"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Подробнее
+          </Link>
         </div>
       </div>
     </article>
