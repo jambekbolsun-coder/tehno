@@ -151,10 +151,11 @@ export default function ProductPage() {
 
       <div className="product-detail-grid market-product-detail">
         <section className="market-product-gallery-card">
-          <div className="market-product-badges">
-            {discount > 0 && <span>-{discount}%</span>}
-            {product.installmentEligible && <b>0·0·12</b>}
-          </div>
+          {discount > 0 && (
+            <div className="market-product-badges">
+              <span>-{discount}%</span>
+            </div>
+          )}
           <ProductSwipeGallery
             images={product.images.slice(0, 5)}
             index={selectedImage}
@@ -293,15 +294,6 @@ export default function ProductPage() {
             )}
           </section>
         )}
-
-        <section className="market-product-card market-seller-card">
-          <h2>Продавец</h2>
-          <div>
-            <img src="/logo.jpg" alt="TEHNO CENTER 2" />
-            <span><small>Магазин</small><strong>TEHNO CENTER 2</strong></span>
-            <ChevronRight size={22} />
-          </div>
-        </section>
 
         {product.installmentEligible && <InstallmentCalculator amount={price * quantity} />}
       </div>

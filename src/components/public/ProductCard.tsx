@@ -1,4 +1,4 @@
-import { Heart, ShoppingCart, Star } from "lucide-react";
+import { ChevronRight, Heart, ShoppingCart, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
@@ -42,7 +42,6 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="product-card__media">
         <div className="product-card__badges">
           {discount > 0 && <span className="market-discount-badge">-{discount}%</span>}
-          {product.installmentEligible && <span className="market-installment-badge">0·0·12</span>}
           {activePromotion && !discount && (
             <span className={`promo-ribbon promo-ribbon--${activePromotion.type}`}>
               {t(promoKey[activePromotion.type])}
@@ -50,6 +49,7 @@ export function ProductCard({ product }: { product: Product }) {
           )}
         </div>
         <button
+          type="button"
           className={`favorite-button${isFavorite ? " is-active" : ""}`}
           onClick={() => {
             toggleFavorite(product.id);
@@ -75,11 +75,15 @@ export function ProductCard({ product }: { product: Product }) {
           {product.oldPrice && product.oldPrice > price && <del>{formatMoney(product.oldPrice)}</del>}
         </div>
         {activePromotion?.endAt && <span className="product-card__deadline">{t("until")} {formatDate(activePromotion.endAt)}</span>}
-        <div className="product-card__footer">
-          <button className="product-cart-button" onClick={add} aria-label={t("addCart")}>
+        <div className="product-card__footer product-card__footer--actions">
+          <button type="button" className="product-cart-button" onClick={add} aria-label={t("addCart")}>
             <ShoppingCart size={18} />
             <span>{t("addCart")}</span>
           </button>
+          <Link className="product-details-button" to={`/product/${product.slug}`}>
+            <span>Подробнее</span>
+            <ChevronRight size={17} />
+          </Link>
         </div>
       </div>
     </article>

@@ -1,14 +1,39 @@
 import { ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ProductGrid } from "@/components/public/ProductGrid";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
 
 const banners = [
-  { src: "/market-banner-sale.webp", href: "/catalog", label: "Супер скидки на технику" },
-  { src: "/market-banner-installment.webp", href: "/catalog", label: "Рассрочка на технику" },
-  { src: "/market-banner-delivery.webp", href: "/catalog", label: "Доставка техники" },
+  {
+    desktop: "/market-installment-desktop.avif",
+    tablet: "/market-installment-tablet.avif",
+    mobile: "/market-installment-mobile.avif",
+    href: "/catalog",
+    label: "Рассрочка 12 месяцев на все товары",
+  },
+  {
+    desktop: "/market-gift-desktop.avif",
+    tablet: "/market-gift-tablet.avif",
+    mobile: "/market-gift-mobile.avif",
+    href: "/catalog",
+    label: "Купите холодильник — чайник в подарок",
+  },
+  {
+    desktop: "/market-sale-desktop.avif",
+    tablet: "/market-sale-tablet.avif",
+    mobile: "/market-sale-mobile.avif",
+    href: "/catalog",
+    label: "Горячие скидки до 30 процентов",
+  },
+  {
+    desktop: "/market-address-desktop.avif",
+    tablet: "/market-address-tablet.avif",
+    mobile: "/market-address-mobile.avif",
+    href: "/contacts",
+    label: "TEHNO CENTER — Токтогула 236",
+  },
 ];
 
 export default function HomePage() {
@@ -20,11 +45,12 @@ export default function HomePage() {
     (category) => category.isVisible,
   );
   const [activeBanner, setActiveBanner] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(
       () => setActiveBanner((value) => (value + 1) % banners.length),
-      4200,
+      5000,
     );
     return () => window.clearInterval(timer);
   }, []);
@@ -55,19 +81,40 @@ export default function HomePage() {
     [products],
   );
 
+  const moveBanner = (direction: 1 | -1) => {
+    setActiveBanner((value) => (value + direction + banners.length) % banners.length);
+  };
+
   return (
     <div className="market-home container page-space">
-      <section className="market-banner-carousel" aria-label="Акции">
+      <section
+        className="market-banner-carousel"
+        aria-label="Акции"
+        onTouchStart={(event) => {
+          touchStartX.current = event.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(event) => {
+          const start = touchStartX.current;
+          touchStartX.current = null;
+          const end = event.changedTouches[0]?.clientX;
+          if (start === null || end === undefined || Math.abs(end - start) < 45) return;
+          moveBanner(end < start ? 1 : -1);
+        }}
+      >
         <div className="market-banner-track">
           {banners.map((banner, index) => (
             <Link
-              key={banner.src}
+              key={banner.desktop}
               to={banner.href}
               className={`market-banner${index === activeBanner ? " is-active" : ""}`}
               aria-hidden={index !== activeBanner}
               tabIndex={index === activeBanner ? 0 : -1}
             >
-              <img src={banner.src} alt={banner.label} />
+              <picture>
+                <source media="(max-width: 640px)" srcSet={banner.mobile} />
+                <source media="(max-width: 1024px)" srcSet={banner.tablet} />
+                <img src={banner.desktop} alt={banner.label} fetchPriority={index === 0 ? "high" : "auto"} />
+              </picture>
             </Link>
           ))}
         </div>
@@ -75,7 +122,7 @@ export default function HomePage() {
           {banners.map((banner, index) => (
             <button
               type="button"
-              key={banner.src}
+              key={banner.desktop}
               className={index === activeBanner ? "is-active" : ""}
               aria-label={`Баннер ${index + 1}`}
               onClick={() => setActiveBanner(index)}
@@ -126,7 +173,7 @@ export default function HomePage() {
       <section className="market-catalog-preview">
         <div className="market-section-heading">
           <div>
-            <span>TEHNO CENTER 2</span>
+            <span>TEHNO CENTER</span>
             <h2>Популярные товары</h2>
           </div>
           <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
