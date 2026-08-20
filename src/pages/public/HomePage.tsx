@@ -1,40 +1,18 @@
-import { ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { ProductGrid } from "@/components/public/ProductGrid";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
 
 const banners = [
-  {
-    desktop: "/banners/installment-desktop.avif",
-    tablet: "/banners/installment-tablet.avif",
-    mobile: "/banners/installment-mobile.avif",
-    href: "/catalog",
-    label: "Рассрочка 12 месяцев на все товары",
-  },
-  {
-    desktop: "/banners/gift-desktop.avif",
-    tablet: "/banners/gift-tablet.avif",
-    mobile: "/banners/gift-mobile.avif",
-    href: "/catalog",
-    label: "Купите холодильник — чайник в подарок",
-  },
-  {
-    desktop: "/banners/sale-desktop.avif",
-    tablet: "/banners/sale-tablet.avif",
-    mobile: "/banners/sale-mobile.avif",
-    href: "/catalog",
-    label: "Горячие скидки до 30 процентов",
-  },
-  {
-    desktop: "/banners/address-desktop.avif",
-    tablet: "/banners/address-tablet.avif",
-    mobile: "/banners/address-mobile.avif",
-    href: "/contacts",
-    label: "TEHNO CENTER — Токтогула 236",
-  },
+  { href: "/catalog", label: "Рассрочка 12 месяцев на все товары" },
+  { href: "/catalog", label: "Купите холодильник — чайник в подарок" },
+  { href: "/catalog", label: "Горячие скидки до 30 процентов" },
+  { href: "/contacts", label: "TEHNO CENTER — Токтогула 236" },
 ];
+
+const wrapIndex = (value: number) => (value + banners.length) % banners.length;
 
 export default function HomePage() {
   const { language, t } = useTranslation();
@@ -45,11 +23,13 @@ export default function HomePage() {
     (category) => category.isVisible,
   );
   const [activeBanner, setActiveBanner] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  const featuredRail = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(
-      () => setActiveBanner((value) => (value + 1) % banners.length),
-      5200,
+      () => setActiveBanner((value) => wrapIndex(value + 1)),
+      5600,
     );
     return () => window.clearInterval(timer);
   }, []);
@@ -63,7 +43,7 @@ export default function HomePage() {
             Number(b.isPopular) - Number(a.isPopular) ||
             b.views - a.views,
         )
-        .slice(0, 4),
+        .slice(0, 10),
     [products],
   );
 
@@ -76,43 +56,71 @@ export default function HomePage() {
             Number(b.isFeatured) - Number(a.isFeatured) ||
             b.views - a.views,
         )
-        .slice(0, 10),
+        .slice(0, 24),
     [products],
   );
 
+  const moveBanner = (delta: number) =>
+    setActiveBanner((value) => wrapIndex(value + delta));
+
+  const scrollFeatured = (direction: -1 | 1) => {
+    const rail = featuredRail.current;
+    if (!rail) return;
+    rail.scrollBy({ left: rail.clientWidth * 0.82 * direction, behavior: "smooth" });
+  };
+
   return (
     <div className="market-home container page-space">
-      <section className="market-banner-carousel" aria-label="Акции">
+      <section
+        className="market-banner-carousel"
+        aria-label="Акции"
+        onTouchStart={(event) => {
+          touchStartX.current = event.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(event) => {
+          if (touchStartX.current === null) return;
+          const endX = event.changedTouches[0]?.clientX ?? touchStartX.current;
+          const delta = endX - touchStartX.current;
+          touchStartX.current = null;
+          if (Math.abs(delta) > 42) moveBanner(delta < 0 ? 1 : -1);
+        }}
+      >
         <div className="market-banner-track">
           {banners.map((banner, index) => (
             <Link
-              key={banner.desktop}
+              key={banner.label}
               to={banner.href}
-              className={`market-banner${index === activeBanner ? " is-active" : ""}`}
+              className={`market-banner market-banner--atlas${index === activeBanner ? " is-active" : ""}`}
+              style={{ "--banner-y": `${index * 33.333333}%` } as CSSProperties}
+              aria-label={banner.label}
               aria-hidden={index !== activeBanner}
               tabIndex={index === activeBanner ? 0 : -1}
             >
-              <picture>
-                <source media="(max-width: 640px)" srcSet={banner.mobile} />
-                <source media="(max-width: 1100px)" srcSet={banner.tablet} />
-                <img
-                  src={banner.desktop}
-                  alt={banner.label}
-                  width="2047"
-                  height="639"
-                  loading={index === 0 ? "eager" : "lazy"}
-                  fetchPriority={index === 0 ? "high" : "auto"}
-                  decoding="async"
-                />
-              </picture>
+              <span className="sr-only">{banner.label}</span>
             </Link>
           ))}
         </div>
+        <button
+          type="button"
+          className="market-banner-arrow market-banner-arrow--left"
+          onClick={() => moveBanner(-1)}
+          aria-label="Предыдущий баннер"
+        >
+          <ChevronLeft size={22} />
+        </button>
+        <button
+          type="button"
+          className="market-banner-arrow market-banner-arrow--right"
+          onClick={() => moveBanner(1)}
+          aria-label="Следующий баннер"
+        >
+          <ChevronRight size={22} />
+        </button>
         <div className="market-banner-dots" aria-label="Переключить баннер">
           {banners.map((banner, index) => (
             <button
               type="button"
-              key={banner.desktop}
+              key={banner.label}
               className={index === activeBanner ? "is-active" : ""}
               aria-label={`Баннер ${index + 1}`}
               aria-current={index === activeBanner ? "true" : undefined}
@@ -122,51 +130,39 @@ export default function HomePage() {
         </div>
       </section>
 
+      {categories.length > 0 && (
+        <nav className="market-category-pills" aria-label="Категории товаров">
+          <Link to="/catalog" className="is-primary">Все товары</Link>
+          {categories.map((category) => (
+            <Link to={`/catalog?category=${category.id}`} key={category.id}>
+              {category.name[language]}
+            </Link>
+          ))}
+        </nav>
+      )}
+
       {featured.length > 0 && (
-        <section className="market-featured-panel">
-          <div className="market-section-heading market-section-heading--inverse">
+        <section className="market-featured-strip">
+          <div className="market-section-heading market-section-heading--compact">
             <div>
               <span>TEHNO CHOICE</span>
-              <h1>Подборка топ электроники</h1>
+              <h1>Лучшее сейчас</h1>
             </div>
-            <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
+            <div className="market-heading-actions">
+              <button type="button" onClick={() => scrollFeatured(-1)} aria-label="Листать товары назад"><ChevronLeft size={19} /></button>
+              <button type="button" onClick={() => scrollFeatured(1)} aria-label="Листать товары вперёд"><ChevronRight size={19} /></button>
+              <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
+            </div>
           </div>
-          <ProductGrid products={featured} />
-        </section>
-      )}
-
-      {categories.length > 0 && (
-        <section className="market-category-block">
-          <div className="market-section-heading">
-            <h2>{t("catalog")}</h2>
-            <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
-          </div>
-          <div className="market-category-rail">
-            {categories.map((category) => {
-              const preview = products.find((product) => product.categoryId === category.id);
-              return (
-                <Link to={`/catalog?category=${category.id}`} key={category.id}>
-                  <span className="market-category-image">
-                    <img
-                      src={preview?.images[0]?.url || "/logo.jpg"}
-                      alt={category.name[language]}
-                      loading="lazy"
-                    />
-                  </span>
-                  <strong>{category.name[language]}</strong>
-                </Link>
-              );
-            })}
+          <div className="market-product-rail" ref={featuredRail}>
+            <ProductGrid products={featured} />
           </div>
         </section>
       )}
 
-      <section className="market-catalog-preview">
-        <div className="market-section-heading">
-          <div>
-            <span>TEHNO CENTER</span>
-            <h2>Популярные товары</h2>
-          </div>
+      <section className="market-catalog-preview market-catalog-preview--flat">
+        <div className="market-section-heading market-section-heading--compact">
+          <h2>Популярное для вас</h2>
           <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
         </div>
 
@@ -174,8 +170,8 @@ export default function HomePage() {
           <ProductGrid products={catalog} />
         ) : (
           <div className="market-empty-catalog">
-            <strong>Каталог пока пуст</strong>
-            <p>Добавь товары в админке — они автоматически появятся здесь.</p>
+            <strong>Товары скоро появятся</strong>
+            <p>Мы обновляем ассортимент.</p>
           </div>
         )}
       </section>
