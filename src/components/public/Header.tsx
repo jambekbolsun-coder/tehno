@@ -8,12 +8,19 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useBodyLock } from "@/hooks/useBodyLock";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useAppStore } from "@/stores/useAppStore";
 import { LanguageSwitcher } from "@/components/public/LanguageSwitcher";
-import { Logo } from "@/components/ui/Logo";
+
+function StorefrontLogo() {
+  return (
+    <Link to="/" className="storefront-logo" aria-label="TEHNO CENTER — главная">
+      <img src="/tehno-center-logo.webp" alt="TEHNO CENTER" />
+    </Link>
+  );
+}
 
 export function Header() {
   const { t } = useTranslation();
@@ -58,7 +65,7 @@ export function Header() {
   return (
     <header className="site-header site-header--service-ui">
       <div className="site-header__inner container">
-        <Logo />
+        <StorefrontLogo />
         <NavLink className="desktop-catalog-link" to="/catalog">{t("catalog")}</NavLink>
         <form className="header-search" onSubmit={search} role="search">
           <Search size={17} />
@@ -84,7 +91,7 @@ export function Header() {
       <div className={`mobile-drawer-layer${menuOpen ? " is-open" : ""}`} aria-hidden={!menuOpen} onMouseDown={(event) => event.target === event.currentTarget && setMenuOpen(false)}>
         <aside className="mobile-drawer" aria-label={t("menu")}>
           <div className="mobile-drawer__top">
-            <Logo />
+            <StorefrontLogo />
             <button className="icon-button" onClick={() => setMenuOpen(false)} aria-label={t("close")}><X size={22} /></button>
           </div>
           <form className="mobile-search" onSubmit={search}>
