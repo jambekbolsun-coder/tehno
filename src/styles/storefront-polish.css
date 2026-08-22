@@ -507,8 +507,13 @@
   .public-app .market-banner-arrow--right { right: 8px; }
 
   .public-app .market-featured-strip { padding: 16px 10px 14px; border-radius: 19px; }
+  .public-app .market-product-rail {
+    overscroll-behavior-inline: auto;
+    scroll-snap-type: x proximity;
+    touch-action: pan-x pan-y pinch-zoom;
+  }
   .public-app .market-product-rail .product-grid { grid-auto-columns: min(250px, 68vw); }
-  .public-app .market-product-rail .product-card { width: auto; }
+  .public-app .market-product-rail .product-card { width: auto; scroll-snap-stop: normal; }
 
   .public-app .market-catalog-preview--flat > .product-grid,
   .public-app .catalog-page--market-v2 .catalog-results > .product-grid,
@@ -517,10 +522,29 @@
     gap: 14px 9px !important;
   }
 
-  .public-app .product-card { border-radius: 16px !important; }
+  .public-app .product-card {
+    grid-template-rows: auto minmax(0, 1fr);
+    aspect-ratio: auto;
+    border-radius: 16px !important;
+  }
+  .public-app .product-card__media { aspect-ratio: 1 / 1.02; }
   .public-app .product-card__body { padding: 10px !important; }
-  .public-app .product-card__title { font-size: .75rem !important; }
-  .public-app .product-card__model { font-size: .58rem !important; }
+  .public-app .product-card__title {
+    min-height: 2.6em !important;
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: .75rem !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .public-app .product-card__model {
+    min-height: 2.6em;
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: .58rem !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
   .public-app .product-card__price-row { padding-top: 4px; }
   .public-app .product-card__price-row strong { font-size: .96rem !important; }
   .public-app .product-card__footer { grid-template-columns: minmax(0, 1fr) 39px !important; gap: 6px; margin-top: 6px; }
