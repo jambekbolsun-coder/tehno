@@ -20,8 +20,12 @@ const waitForProducts = async (page: Page) => {
 test("главная открывает качественную перелистываемую витрину и живые товары", async ({ page }) => {
   await page.goto("/#/");
   await expect(page.locator(".market-banner-carousel")).toBeVisible();
-  await expect(page.locator(".market-banner")).toHaveCount(4);
-  await expect(page.locator(".market-banner--atlas")).toHaveCount(4);
+  const banners = page.locator(".market-banner");
+  await expect(banners).toHaveCount(4);
+  await expect(banners.locator("picture")).toHaveCount(4);
+  await expect(banners.locator('source[media="(min-width: 1101px)"]')).toHaveCount(4);
+  await expect(banners.locator('source[media="(min-width: 761px)"]')).toHaveCount(4);
+  await expect(banners.locator("img")).toHaveCount(4);
   await expect(page.getByRole("button", { name: "Предыдущий баннер" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Следующий баннер" })).toBeVisible();
   await page.getByRole("button", { name: "Следующий баннер" }).click();
