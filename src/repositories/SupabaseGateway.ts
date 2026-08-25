@@ -31,9 +31,11 @@ import type {
   SupplierDeliveryLineInput,
   SupplierDebt,
   SupplierPayment,
+  TrafficFee,
 } from "@/types/domain";
 import type { Json, Tables, TablesUpdate } from "@/types/supabase";
 import type { CreateLeadInput } from "@/services/LeadService";
+import { managerAccessService } from "@/services/ManagerAccessService";
 import { nowIso } from "@/utils/date";
 import { createId } from "@/utils/id";
 
@@ -114,6 +116,7 @@ export interface SupabaseSnapshot {
   supplierPayments: SupplierPayment[];
   managerCommissions: ManagerCommission[];
   managerPayouts: ManagerPayout[];
+  trafficFees: TrafficFee[];
   expenses: Expense[];
   returns: ReturnRecord[];
   movements: InventoryMovement[];
@@ -158,6 +161,7 @@ const emptySnapshot = (): SupabaseSnapshot => ({
   supplierPayments: [],
   managerCommissions: [],
   managerPayouts: [],
+  trafficFees: [],
   expenses: [],
   returns: [],
   movements: [],
@@ -402,6 +406,7 @@ class SupabaseGateway {
       supplierPayments: Tables<"supplier_payments">[];
       commissions: Tables<"manager_commissions">[];
       managerPayouts: Tables<"manager_payouts">[];
+      trafficFees: Tables<"traffic_fees">[];
       expenses: Tables<"expenses">[];
       returns: Tables<"returns">[];
       movements: Tables<"inventory_movements">[];
@@ -436,6 +441,7 @@ class SupabaseGateway {
         supabase.from("analytics_events").select("*").order("occurred_at", { ascending: false }).limit(5000),
         supabase.from("ai_import_logs").select("*").order("created_at", { ascending: false }),
         supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(2000),
+        supabase.from("traffic_fees").select("*").order("accrued_at", { ascending: false }),
       ]);
       const values: unknown[][] = results.map((result, index) => {
         if (result.error) throw new Error(`CRM ${index + 1}: ${result.error.message}`);
@@ -465,6 +471,7 @@ class SupabaseGateway {
         analytics: values[20] as Tables<"analytics_events">[],
         aiLogs: values[21] as Tables<"ai_import_logs">[],
         auditLogs: values[22] as Tables<"audit_logs">[],
+        trafficFees: values[23] as Tables<"traffic_fees">[],
       };
     }
 
@@ -744,7 +751,8 @@ class SupabaseGateway {
     }));
     base.managerCommissions = staffData.commissions.map((row) => ({
       id: row.id,
-      managerId: row.manager_id,
+      managerId: row.manager_id || "",
+      managerNameSnapshot: row.manager_name_snapshot,
       orderId: row.order_id,
       amount: Math.max(0, row.amount_tyiyn - row.adjusted_tyiyn),
       status: row.status === "cancelled" ? "cancelled" : row.paid_tyiyn >= row.amount_tyiyn ? "paid" : "accrued",
@@ -753,13 +761,28 @@ class SupabaseGateway {
     }));
     base.managerPayouts = staffData.managerPayouts.map((row) => ({
       id: row.id,
-      managerId: row.manager_id,
+      managerId: row.manager_id || "",
+      managerNameSnapshot: row.manager_name_snapshot,
       amount: row.amount_tyiyn,
       comment: row.note || "",
       paidByUserId: row.created_by || "",
       paidAt: row.paid_at,
       createdAt: row.created_at,
       updatedAt: row.created_at,
+    }));
+    base.trafficFees = staffData.trafficFees.map((row) => ({
+      id: row.id,
+      orderId: row.order_id,
+      rateBasisPoints: row.rate_basis_points,
+      saleTotal: row.sale_total_tyiyn,
+      amount: row.fee_amount_tyiyn,
+      accruedAt: row.accrued_at,
+      settledAt: row.settled_at || undefined,
+      settledByUserId: row.settled_by || undefined,
+      settlementBatchId: row.settlement_batch_id || undefined,
+      settlementExpenseId: row.settlement_expense_id || undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
     }));
     base.managers = staffData.managerProfiles.flatMap((manager) => {
       const profile = staffData!.profiles.find((item) => item.id === manager.user_id);
@@ -857,7 +880,7 @@ class SupabaseGateway {
       rawText: row.raw_text,
       parsedData: asObject(row.parsed_data) as AIImportLog["parsedData"],
       status: ["preview","confirmed","rejected"].includes(row.status) ? row.status as AIImportLog["status"] : "preview",
-      authorUserId: row.created_by,
+      authorUserId: row.created_by || "",
       relatedOrderId: row.created_order_id || undefined,
       createdAt: row.created_at,
       updatedAt: row.created_at,
@@ -1115,12 +1138,8 @@ class SupabaseGateway {
     if (!data?.ok) throw new Error(data?.error || "Не удалось отправить приглашение");
   }
 
-  async archiveManager(userId: string) {
-    const { error } = await supabase.rpc("archive_manager", {
-      p_user_id: userId,
-      p_reason: "Удалён управляющим из CRM",
-    });
-    if (error) throw new Error(error.message);
+  async deleteManager(userId: string) {
+    await managerAccessService.deleteManager(userId);
   }
 
   async setManagerDistribution(userId: string, acceptsLeads: boolean) {
@@ -1282,11 +1301,17 @@ class SupabaseGateway {
     if (error) throw new Error(error.message);
   }
 
-  async clearNotifications(userId?: string) {
-    let query = supabase.from("notifications").update({ is_read: true, read_at: nowIso() }).eq("is_read", false);
-    if (userId) query = query.eq("target_user_id", userId);
-    const result = await query;
-    if (result.error) throw new Error(result.error.message);
+  async markAllNotificationsRead() {
+    const { error } = await supabase.rpc("mark_all_notifications_read");
+    if (error) throw new Error(error.message);
+  }
+
+  async settleTrafficFees(note?: string) {
+    const { data, error } = await supabase.rpc("settle_traffic_fees", {
+      p_note: note || undefined,
+    });
+    if (error) throw new Error(error.message);
+    return data;
   }
 
   async saveSettings(settings: AppSettings) {

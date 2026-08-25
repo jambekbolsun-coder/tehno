@@ -64,6 +64,58 @@ Deno.serve(async (req: Request) => {
     const payload = body as Record<string, unknown>;
     const action = String(payload.action ?? "");
 
+    if (action === "delete") {
+      const authorization = req.headers.get("Authorization");
+      if (!authorization) return json({ error: "Требуется авторизация" }, 401);
+      const userClient = createClient(projectUrl, publishableKey, {
+        global: { headers: { Authorization: authorization } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: authData, error: authError } = await userClient.auth.getUser();
+      if (authError || !authData.user) return json({ error: "Сессия недействительна" }, 401);
+      const { data: callerProfile, error: callerProfileError } = await admin
+        .from("profiles")
+        .select("role,is_active")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+      if (callerProfileError) throw callerProfileError;
+      if (callerProfile?.role !== "admin" || !callerProfile.is_active)
+        return json({ error: "Только управляющий может удалять менеджеров" }, 403);
+
+      const userId = String(payload.user_id ?? "").trim();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId))
+        return json({ error: "Некорректный идентификатор менеджера" }, 400);
+      if (userId === authData.user.id)
+        return json({ error: "Нельзя удалить собственную учётную запись" }, 400);
+
+      const { data: target, error: targetError } = await admin
+        .from("profiles")
+        .select("role,full_name,phone")
+        .eq("id", userId)
+        .maybeSingle();
+      if (targetError) throw targetError;
+      if (!target || target.role !== "manager")
+        return json({ error: "Менеджер не найден" }, 404);
+
+      const deleted = await admin.auth.admin.deleteUser(userId);
+      if (deleted.error) throw deleted.error;
+
+      const audit = await admin.from("audit_logs").insert({
+        actor_id: authData.user.id,
+        table_name: "profiles",
+        record_id: userId,
+        action: "DELETE",
+        metadata: {
+          function: "manager-access",
+          event: "MANAGER_HARD_DELETE",
+          manager_name: target.full_name,
+          qr_rejoin_supported: true,
+        },
+      });
+      if (audit.error) console.warn("manager-access audit warning:", audit.error.message);
+      return json({ ok: true, user_id: userId });
+    }
+
     if (action === "create") {
       const authorization = req.headers.get("Authorization");
       if (!authorization) return json({ error: "Требуется авторизация" }, 401);

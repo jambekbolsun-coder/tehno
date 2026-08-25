@@ -73,4 +73,11 @@ export const managerAccessService = {
       loginEmail: data.login_email,
     };
   },
+
+  async deleteManager(userId: string): Promise<void> {
+    await invoke<{ ok: true; user_id: string }>({
+      action: "delete",
+      user_id: userId,
+    });
+  },
 };

@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router-dom";
 import { ProductGrid } from "@/components/public/ProductGrid";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -25,6 +25,8 @@ export default function HomePage() {
   const [activeBanner, setActiveBanner] = useState(0);
   const touchStartX = useRef<number | null>(null);
   const featuredRail = useRef<HTMLDivElement | null>(null);
+  const featuredDrag = useRef({ pointerId: -1, startX: 0, startY: 0, startScrollLeft: 0, moved: false });
+  const suppressFeaturedClick = useRef(false);
 
   useEffect(() => {
     const timer = window.setInterval(
@@ -67,6 +69,44 @@ export default function HomePage() {
     const rail = featuredRail.current;
     if (!rail) return;
     rail.scrollBy({ left: rail.clientWidth * 0.82 * direction, behavior: "smooth" });
+  };
+
+  const startFeaturedDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    const rail = event.currentTarget;
+    featuredDrag.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startScrollLeft: rail.scrollLeft,
+      moved: false,
+    };
+    suppressFeaturedClick.current = false;
+  };
+
+  const moveFeaturedDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = featuredDrag.current;
+    if (drag.pointerId !== event.pointerId) return;
+    const delta = event.clientX - drag.startX;
+    const verticalDelta = event.clientY - drag.startY;
+    if (!drag.moved && Math.abs(delta) < 6) return;
+    if (!drag.moved && Math.abs(delta) <= Math.abs(verticalDelta)) return;
+    drag.moved = true;
+    suppressFeaturedClick.current = true;
+    if (!event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.classList.add("is-dragging");
+    event.preventDefault();
+    event.currentTarget.scrollLeft = drag.startScrollLeft - delta;
+  };
+
+  const endFeaturedDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (featuredDrag.current.pointerId !== event.pointerId) return;
+    event.currentTarget.classList.remove("is-dragging");
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    featuredDrag.current.pointerId = -1;
+    window.setTimeout(() => { suppressFeaturedClick.current = false; }, 0);
   };
 
   return (
@@ -167,7 +207,26 @@ export default function HomePage() {
               <Link to="/catalog">{t("allProducts")} <ChevronRight size={18} /></Link>
             </div>
           </div>
-          <div className="market-product-rail" ref={featuredRail}>
+          <div
+            className="market-product-rail"
+            ref={featuredRail}
+            role="region"
+            aria-label="Товары TEHNO CHOICE. Проведите пальцем или используйте стрелки."
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft") { event.preventDefault(); scrollFeatured(-1); }
+              if (event.key === "ArrowRight") { event.preventDefault(); scrollFeatured(1); }
+            }}
+            onPointerDown={startFeaturedDrag}
+            onPointerMove={moveFeaturedDrag}
+            onPointerUp={endFeaturedDrag}
+            onPointerCancel={endFeaturedDrag}
+            onClickCapture={(event) => {
+              if (!suppressFeaturedClick.current) return;
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          >
             <ProductGrid products={featured} />
           </div>
         </section>

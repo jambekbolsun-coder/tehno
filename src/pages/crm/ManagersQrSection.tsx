@@ -121,12 +121,12 @@ export function ManagersQrSection() {
                 className="danger"
                 disabled={loading}
                 onClick={() => {
-                  if (window.confirm(`Удалить менеджера ${manager.name}? После этого он потеряет доступ к рабочему месту.`))
+                  if (window.confirm(`Полностью удалить менеджера ${manager.name}? Доступ будет закрыт, а незавершённые заявки безопасно переназначены. Новый QR в будущем сможет создать ему новую учётную запись.`))
                     void deleteManager(manager.id);
                 }}
                 title="Удалить менеджера"
               >
-                <Trash2 size={16} /> Удалить
+                <Trash2 size={16} aria-hidden="true" /> Удалить
               </button>
             </footer>
           </article>

@@ -409,6 +409,7 @@ export function ManagersSection() {
     (state) => state.toggleManagerDistribution,
   );
   const deleteManager = useAppStore((state) => state.deleteManager);
+  const loading = useAppStore((state) => state.loading);
   const payout = useAppStore((state) => state.payoutManager);
   const showToast = useAppStore((state) => state.showToast);
   const [selected, setSelected] = useState<ManagerProfile | null>(null);
@@ -526,8 +527,15 @@ export function ManagersSection() {
                 <button onClick={() => setSelected(manager)}>
                   Подробнее <ChevronRight size={15} />
                 </button>
-                <button className="danger" onClick={() => window.confirm(`Отключить менеджера ${manager.name}?`) && void deleteManager(manager.id)} title="Отключить менеджера">
-                  <Trash2 size={15}/>
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={loading}
+                  onClick={() => window.confirm(`Полностью удалить менеджера ${manager.name}? Доступ будет закрыт, а незавершённые заявки безопасно переназначены.`) && void deleteManager(manager.id)}
+                  title="Полностью удалить менеджера"
+                  aria-label={`Полностью удалить менеджера ${manager.name}`}
+                >
+                  <Trash2 size={15} aria-hidden="true" />
                 </button>
               </footer>
             </article>

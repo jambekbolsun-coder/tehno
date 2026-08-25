@@ -55,7 +55,10 @@ class LocalFinanceService implements FinanceService {
     const paidCommissions = repositories.managerPayouts.findAll().reduce((sum, item) => sum + item.amount, 0);
     const supplierPayments = repositories.supplierPayments.findAll().reduce((sum, item) => sum + item.amount, 0);
     const managerDebt = Math.max(0, managerCommissions - paidCommissions);
-    const expenses = repositories.expenses.findAll().reduce((sum, item) => sum + item.amount, 0);
+    const expenses = repositories.expenses
+      .findAll()
+      .filter((item) => item.category !== "traffic_fee")
+      .reduce((sum, item) => sum + item.amount, 0);
     const returns = repositories.returns.findAll().reduce((sum, item) => sum + item.amount, 0);
     const accrualProfit = revenue - costOfGoods - managerCommissions - expenses - returns;
     const cashFlow = cashReceived - supplierPayments - paidCommissions - expenses - returns;

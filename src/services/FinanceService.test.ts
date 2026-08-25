@@ -112,4 +112,34 @@ describe("FinanceService", () => {
     expect(summary.accrualProfit).toBe(46_550);
     expect(summary.cashFlow).toBe(155_000);
   });
+
+  it("не смешивает расчёт Трафик системы с обычными расходами дашборда", () => {
+    repositories.orders.create({
+      ...pendingCourierOrder,
+      status: "completed",
+      paid: 269_000,
+      financialProcessed: true,
+      courierAdvanceStatus: "settled",
+    });
+    repositories.expenses.create({
+      id: "expense-traffic",
+      category: "traffic_fee",
+      amount: 13_450,
+      date: "2026-08-12",
+      description: "Расчёт Трафик системы",
+      recipient: "Трафик система",
+      paymentMethod: "transfer",
+      authorUserId: "admin",
+      createdAt: pendingCourierOrder.createdAt,
+      updatedAt: pendingCourierOrder.updatedAt,
+    });
+
+    expect(financeService.summary()).toMatchObject({
+      revenue: 269_000,
+      onlineRevenue: 269_000,
+      expenses: 0,
+      accrualProfit: 69_000,
+      cashFlow: 269_000,
+    });
+  });
 });
