@@ -17,7 +17,7 @@ export type Database = {
       ai_import_logs: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           created_order_id: string | null
           id: string
           parsed_data: Json
@@ -27,7 +27,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           created_order_id?: string | null
           id?: string
           parsed_data?: Json
@@ -37,7 +37,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           created_order_id?: string | null
           id?: string
           parsed_data?: Json
@@ -163,6 +163,527 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      atadan_admins: {
+        Row: {
+          created_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      atadan_analytics_events: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          event_name: string
+          id: number
+          locale: string | null
+          metadata: Json
+          page: string | null
+          referrer: string | null
+          session_id: string
+          tractor_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          event_name: string
+          id?: never
+          locale?: string | null
+          metadata?: Json
+          page?: string | null
+          referrer?: string | null
+          session_id: string
+          tractor_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          event_name?: string
+          id?: never
+          locale?: string | null
+          metadata?: Json
+          page?: string | null
+          referrer?: string | null
+          session_id?: string
+          tractor_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atadan_analytics_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "atadan_analytics_sessions"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "atadan_analytics_events_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "atadan_tractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atadan_analytics_sessions: {
+        Row: {
+          device_type: string | null
+          first_page: string | null
+          last_activity: string
+          locale: string | null
+          referrer: string | null
+          session_id: string
+          source: string | null
+          started_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          device_type?: string | null
+          first_page?: string | null
+          last_activity?: string
+          locale?: string | null
+          referrer?: string | null
+          session_id: string
+          source?: string | null
+          started_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          device_type?: string | null
+          first_page?: string | null
+          last_activity?: string
+          locale?: string | null
+          referrer?: string | null
+          session_id?: string
+          source?: string | null
+          started_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
+      atadan_installment_programs: {
+        Row: {
+          annual_rate_percent: number
+          calculation_type: string
+          disclaimer_en: string | null
+          disclaimer_kg: string | null
+          disclaimer_ru: string | null
+          enabled: boolean
+          id: string
+          markup_percent: number
+          min_down_payment_percent: number
+          terms_months: number[]
+          tractor_id: string
+          updated_at: string
+        }
+        Insert: {
+          annual_rate_percent?: number
+          calculation_type?: string
+          disclaimer_en?: string | null
+          disclaimer_kg?: string | null
+          disclaimer_ru?: string | null
+          enabled?: boolean
+          id?: string
+          markup_percent?: number
+          min_down_payment_percent?: number
+          terms_months?: number[]
+          tractor_id: string
+          updated_at?: string
+        }
+        Update: {
+          annual_rate_percent?: number
+          calculation_type?: string
+          disclaimer_en?: string | null
+          disclaimer_kg?: string | null
+          disclaimer_ru?: string | null
+          enabled?: boolean
+          id?: string
+          markup_percent?: number
+          min_down_payment_percent?: number
+          terms_months?: number[]
+          tractor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atadan_installment_programs_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: true
+            referencedRelation: "atadan_tractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atadan_promotions: {
+        Row: {
+          created_at: string
+          description_en: string | null
+          description_kg: string | null
+          description_ru: string | null
+          discount_type: string | null
+          discount_value: number | null
+          enabled: boolean
+          ends_at: string | null
+          id: string
+          starts_at: string | null
+          title_en: string | null
+          title_kg: string | null
+          title_ru: string | null
+          tractor_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description_en?: string | null
+          description_kg?: string | null
+          description_ru?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          enabled?: boolean
+          ends_at?: string | null
+          id?: string
+          starts_at?: string | null
+          title_en?: string | null
+          title_kg?: string | null
+          title_ru?: string | null
+          tractor_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description_en?: string | null
+          description_kg?: string | null
+          description_ru?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          enabled?: boolean
+          ends_at?: string | null
+          id?: string
+          starts_at?: string | null
+          title_en?: string | null
+          title_kg?: string | null
+          title_ru?: string | null
+          tractor_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atadan_promotions_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "atadan_tractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atadan_site_content: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      atadan_spec_groups: {
+        Row: {
+          id: string
+          sort_order: number
+          title_en: string | null
+          title_kg: string | null
+          title_ru: string
+          tractor_id: string
+        }
+        Insert: {
+          id?: string
+          sort_order?: number
+          title_en?: string | null
+          title_kg?: string | null
+          title_ru: string
+          tractor_id: string
+        }
+        Update: {
+          id?: string
+          sort_order?: number
+          title_en?: string | null
+          title_kg?: string | null
+          title_ru?: string
+          tractor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atadan_spec_groups_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "atadan_tractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atadan_specs: {
+        Row: {
+          group_id: string
+          highlight: boolean
+          id: string
+          label_en: string | null
+          label_kg: string | null
+          label_ru: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          group_id: string
+          highlight?: boolean
+          id?: string
+          label_en?: string | null
+          label_kg?: string | null
+          label_ru: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          group_id?: string
+          highlight?: boolean
+          id?: string
+          label_en?: string | null
+          label_kg?: string | null
+          label_ru?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atadan_specs_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "atadan_spec_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atadan_story_blocks: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          sort_order: number
+          tractor_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          sort_order?: number
+          tractor_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          sort_order?: number
+          tractor_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atadan_story_blocks_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "atadan_tractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atadan_tractor_media: {
+        Row: {
+          alt_en: string | null
+          alt_kg: string | null
+          alt_ru: string | null
+          created_at: string
+          id: string
+          kind: string
+          poster_url: string | null
+          role: string
+          sort_order: number
+          tractor_id: string
+          url: string
+        }
+        Insert: {
+          alt_en?: string | null
+          alt_kg?: string | null
+          alt_ru?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          poster_url?: string | null
+          role?: string
+          sort_order?: number
+          tractor_id: string
+          url: string
+        }
+        Update: {
+          alt_en?: string | null
+          alt_kg?: string | null
+          alt_ru?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          poster_url?: string | null
+          role?: string
+          sort_order?: number
+          tractor_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atadan_tractor_media_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "atadan_tractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atadan_tractor_translations: {
+        Row: {
+          full_description: string | null
+          locale: string
+          short_description: string | null
+          title: string | null
+          tractor_id: string
+        }
+        Insert: {
+          full_description?: string | null
+          locale: string
+          short_description?: string | null
+          title?: string | null
+          tractor_id: string
+        }
+        Update: {
+          full_description?: string | null
+          locale?: string
+          short_description?: string | null
+          title?: string | null
+          tractor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atadan_tractor_translations_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "atadan_tractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atadan_tractors: {
+        Row: {
+          availability: string
+          created_at: string
+          currency: string
+          drive: string | null
+          engine: string | null
+          featured: boolean
+          featured_order: number | null
+          horsepower: number | null
+          id: string
+          model: string
+          old_price: number | null
+          price: number | null
+          published: boolean
+          recommended_hectares: string | null
+          show_price: boolean
+          slug: string
+          transmission: string | null
+          updated_at: string
+        }
+        Insert: {
+          availability?: string
+          created_at?: string
+          currency?: string
+          drive?: string | null
+          engine?: string | null
+          featured?: boolean
+          featured_order?: number | null
+          horsepower?: number | null
+          id?: string
+          model: string
+          old_price?: number | null
+          price?: number | null
+          published?: boolean
+          recommended_hectares?: string | null
+          show_price?: boolean
+          slug: string
+          transmission?: string | null
+          updated_at?: string
+        }
+        Update: {
+          availability?: string
+          created_at?: string
+          currency?: string
+          drive?: string | null
+          engine?: string | null
+          featured?: boolean
+          featured_order?: number | null
+          horsepower?: number | null
+          id?: string
+          model?: string
+          old_price?: number | null
+          price?: number | null
+          published?: boolean
+          recommended_hectares?: string | null
+          show_price?: boolean
+          slug?: string
+          transmission?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       audit_logs: {
         Row: {
@@ -371,7 +892,6 @@ export type Database = {
           city: string | null
           created_at: string
           created_by: string | null
-          deleted_at: string | null
           email: string | null
           full_name: string
           id: string
@@ -393,7 +913,6 @@ export type Database = {
           city?: string | null
           created_at?: string
           created_by?: string | null
-          deleted_at?: string | null
           email?: string | null
           full_name: string
           id?: string
@@ -415,7 +934,6 @@ export type Database = {
           city?: string | null
           created_at?: string
           created_by?: string | null
-          deleted_at?: string | null
           email?: string | null
           full_name?: string
           id?: string
@@ -920,7 +1438,8 @@ export type Database = {
           adjusted_tyiyn: number
           amount_tyiyn: number
           id: string
-          manager_id: string
+          manager_id: string | null
+          manager_name_snapshot: string
           order_id: string
           paid_tyiyn: number
           status: string
@@ -931,7 +1450,8 @@ export type Database = {
           adjusted_tyiyn?: number
           amount_tyiyn: number
           id?: string
-          manager_id: string
+          manager_id?: string | null
+          manager_name_snapshot: string
           order_id: string
           paid_tyiyn?: number
           status?: string
@@ -942,7 +1462,8 @@ export type Database = {
           adjusted_tyiyn?: number
           amount_tyiyn?: number
           id?: string
-          manager_id?: string
+          manager_id?: string | null
+          manager_name_snapshot?: string
           order_id?: string
           paid_tyiyn?: number
           status?: string
@@ -965,6 +1486,48 @@ export type Database = {
           },
         ]
       }
+      manager_join_tokens: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          phone_normalized: string | null
+          revoked_at: string | null
+          token_hash: string
+          used_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          phone_normalized?: string | null
+          revoked_at?: string | null
+          token_hash: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          phone_normalized?: string | null
+          revoked_at?: string | null
+          token_hash?: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       manager_payouts: {
         Row: {
           allocation: Json
@@ -972,7 +1535,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
-          manager_id: string
+          manager_id: string | null
+          manager_name_snapshot: string
           note: string | null
           paid_at: string
           payment_method: string
@@ -984,7 +1548,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          manager_id: string
+          manager_id?: string | null
+          manager_name_snapshot: string
           note?: string | null
           paid_at?: string
           payment_method?: string
@@ -996,7 +1561,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          manager_id?: string
+          manager_id?: string | null
+          manager_name_snapshot?: string
           note?: string | null
           paid_at?: string
           payment_method?: string
@@ -1261,23 +1827,23 @@ export type Database = {
         Row: {
           assigned_manager_id: string | null
           completed_at: string | null
+          courier_advance_status: string
+          courier_advance_tyiyn: number
           created_at: string
           created_by: string | null
           customer_comment: string | null
           customer_id: string
-          courier_advance_status: string
-          courier_advance_tyiyn: number
           delivery_address: string | null
           delivery_city: string | null
           delivery_region: string | null
           delivery_tyiyn: number
           discount_tyiyn: number
           financial_processed: boolean
+          id: string
+          internal_comment: string | null
           inventory_processed: boolean
           inventory_reserved: boolean
           inventory_returned: boolean
-          id: string
-          internal_comment: string | null
           lead_id: string | null
           order_number: number
           paid_tyiyn: number
@@ -1298,23 +1864,23 @@ export type Database = {
         Insert: {
           assigned_manager_id?: string | null
           completed_at?: string | null
+          courier_advance_status?: string
+          courier_advance_tyiyn?: number
           created_at?: string
           created_by?: string | null
           customer_comment?: string | null
           customer_id: string
-          courier_advance_status?: string
-          courier_advance_tyiyn?: number
           delivery_address?: string | null
           delivery_city?: string | null
           delivery_region?: string | null
           delivery_tyiyn?: number
           discount_tyiyn?: number
           financial_processed?: boolean
+          id?: string
+          internal_comment?: string | null
           inventory_processed?: boolean
           inventory_reserved?: boolean
           inventory_returned?: boolean
-          id?: string
-          internal_comment?: string | null
           lead_id?: string | null
           order_number?: never
           paid_tyiyn?: number
@@ -1335,23 +1901,23 @@ export type Database = {
         Update: {
           assigned_manager_id?: string | null
           completed_at?: string | null
+          courier_advance_status?: string
+          courier_advance_tyiyn?: number
           created_at?: string
           created_by?: string | null
           customer_comment?: string | null
           customer_id?: string
-          courier_advance_status?: string
-          courier_advance_tyiyn?: number
           delivery_address?: string | null
           delivery_city?: string | null
           delivery_region?: string | null
           delivery_tyiyn?: number
           discount_tyiyn?: number
           financial_processed?: boolean
+          id?: string
+          internal_comment?: string | null
           inventory_processed?: boolean
           inventory_reserved?: boolean
           inventory_returned?: boolean
-          id?: string
-          internal_comment?: string | null
           lead_id?: string | null
           order_number?: never
           paid_tyiyn?: number
@@ -1963,60 +2529,6 @@ export type Database = {
           },
         ]
       }
-      supplier_payments: {
-        Row: {
-          allocation: Json
-          amount_tyiyn: number
-          created_at: string
-          created_by: string | null
-          id: string
-          note: string | null
-          paid_at: string
-          payment_method: string
-          payment_number: number
-          supplier_id: string
-        }
-        Insert: {
-          allocation?: Json
-          amount_tyiyn: number
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          note?: string | null
-          paid_at?: string
-          payment_method?: string
-          payment_number?: never
-          supplier_id: string
-        }
-        Update: {
-          allocation?: Json
-          amount_tyiyn?: number
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          note?: string | null
-          paid_at?: string
-          payment_method?: string
-          payment_number?: never
-          supplier_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supplier_payments_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_payments_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       supplier_deliveries: {
         Row: {
           created_at: string
@@ -2128,6 +2640,60 @@ export type Database = {
           },
         ]
       }
+      supplier_payments: {
+        Row: {
+          allocation: Json
+          amount_tyiyn: number
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          paid_at: string
+          payment_method: string
+          payment_number: number
+          supplier_id: string
+        }
+        Insert: {
+          allocation?: Json
+          amount_tyiyn: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          paid_at?: string
+          payment_method?: string
+          payment_number?: never
+          supplier_id: string
+        }
+        Update: {
+          allocation?: Json
+          amount_tyiyn?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          paid_at?: string
+          payment_method?: string
+          payment_number?: never
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_payments_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_products: {
         Row: {
           created_at: string
@@ -2172,7 +2738,7 @@ export type Database = {
           {
             foreignKeyName: "supplier_products_delivery_item_id_fkey"
             columns: ["delivery_item_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "supplier_delivery_items"
             referencedColumns: ["id"]
           },
@@ -2250,6 +2816,73 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traffic_fees: {
+        Row: {
+          accrued_at: string
+          created_at: string
+          fee_amount_tyiyn: number
+          id: string
+          order_id: string
+          rate_basis_points: number
+          sale_total_tyiyn: number
+          settled_at: string | null
+          settled_by: string | null
+          settlement_batch_id: string | null
+          settlement_expense_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          accrued_at?: string
+          created_at?: string
+          fee_amount_tyiyn: number
+          id?: string
+          order_id: string
+          rate_basis_points?: number
+          sale_total_tyiyn: number
+          settled_at?: string | null
+          settled_by?: string | null
+          settlement_batch_id?: string | null
+          settlement_expense_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accrued_at?: string
+          created_at?: string
+          fee_amount_tyiyn?: number
+          id?: string
+          order_id?: string
+          rate_basis_points?: number
+          sale_total_tyiyn?: number
+          settled_at?: string | null
+          settled_by?: string | null
+          settlement_batch_id?: string | null
+          settlement_expense_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traffic_fees_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traffic_fees_settled_by_fkey"
+            columns: ["settled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traffic_fees_settlement_expense_id_fkey"
+            columns: ["settlement_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
             referencedColumns: ["id"]
           },
         ]
@@ -2332,6 +2965,30 @@ export type Database = {
         Args: { p_reason?: string; p_supplier_id: string }
         Returns: undefined
       }
+      atadan_dashboard_stats: { Args: { p_days?: number }; Returns: Json }
+      atadan_is_admin: { Args: { check_user?: string }; Returns: boolean }
+      atadan_track_event: {
+        Args: {
+          p_device_type?: string
+          p_event_name: string
+          p_locale?: string
+          p_metadata?: Json
+          p_page?: string
+          p_referrer?: string
+          p_session_id: string
+          p_tractor_id?: string
+          p_utm_campaign?: string
+          p_utm_content?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_utm_term?: string
+        }
+        Returns: undefined
+      }
+      calculate_installment_terms: {
+        Args: { p_amount_tyiyn: number; p_months: number }
+        Returns: Json
+      }
       can_access_customer: { Args: { p_customer_id: string }; Returns: boolean }
       can_access_order: { Args: { p_order_id: string }; Returns: boolean }
       confirm_order_sale: {
@@ -2341,10 +2998,6 @@ export type Database = {
           p_payment_method?: string
           p_received_tyiyn?: number
         }
-        Returns: Json
-      }
-      calculate_installment_terms: {
-        Args: { p_amount_tyiyn: number; p_months: number }
         Returns: Json
       }
       create_product_from_delivery_item: {
@@ -2357,6 +3010,18 @@ export type Database = {
       }
       create_public_order_v2: {
         Args: { p_fingerprint: string; p_payload: Json }
+        Returns: Json
+      }
+      create_staff_order: {
+        Args: {
+          p_assigned_manager_id?: string
+          p_comment?: string
+          p_customer: Json
+          p_delivery?: Json
+          p_items: Json
+          p_sale_channel?: string
+          p_source?: string
+        }
         Returns: Json
       }
       create_staff_order_with_payment: {
@@ -2386,19 +3051,15 @@ export type Database = {
         Args: { p_items: Json; p_notes?: string; p_supplier: Json }
         Returns: Json
       }
-      create_staff_order: {
-        Args: {
-          p_assigned_manager_id?: string
-          p_comment?: string
-          p_customer: Json
-          p_delivery?: Json
-          p_items: Json
-          p_sale_channel?: string
-          p_source?: string
-        }
+      current_app_role: { Args: never; Returns: string }
+      delete_offline_sale: {
+        Args: { p_order_id: string; p_reason?: string }
         Returns: Json
       }
-      current_app_role: { Args: never; Returns: string }
+      delete_product_safely: {
+        Args: { p_product_id: string }
+        Returns: undefined
+      }
       get_analytics_summary: {
         Args: { p_from: string; p_to: string }
         Returns: Json
@@ -2409,10 +3070,7 @@ export type Database = {
       }
       is_active_staff: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
-      delete_product_safely: {
-        Args: { p_product_id: string }
-        Returns: undefined
-      }
+      mark_all_notifications_read: { Args: never; Returns: number }
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: undefined
@@ -2487,10 +3145,10 @@ export type Database = {
           discount_tyiyn: number
           financial_processed: boolean
           id: string
+          internal_comment: string | null
           inventory_processed: boolean
           inventory_reserved: boolean
           inventory_returned: boolean
-          internal_comment: string | null
           lead_id: string | null
           order_number: number
           paid_tyiyn: number
@@ -2515,6 +3173,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      settle_traffic_fees: { Args: { p_note?: string }; Returns: Json }
       update_my_profile: {
         Args: {
           p_avatar_url?: string

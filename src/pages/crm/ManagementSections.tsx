@@ -4,6 +4,7 @@ import {
   Bell,
   BellOff,
   CalendarDays,
+  CheckCheck,
   CheckCircle2,
   ChevronDown,
   CircleDollarSign,
@@ -14,10 +15,12 @@ import {
   Filter,
   HandCoins,
   Landmark,
+  LockKeyhole,
   Megaphone,
   PackageMinus,
   Plus,
   ReceiptText,
+  RadioTower,
   RotateCcw,
   Search,
   Settings2,
@@ -59,8 +62,13 @@ const expenseLabels: Record<Expense["category"], string> = {
   equipment: "Техника",
   repair: "Ремонт",
   tax: "Налоги",
+  traffic_fee: "Трафик система",
   other: "Другое",
 };
+
+const manualExpenseLabels = Object.entries(expenseLabels).filter(
+  ([value]) => value !== "traffic_fee",
+);
 
 function ReturnEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
   const returns = useAppStore((state) => state.returns);
@@ -433,7 +441,7 @@ function ExpenseEditor({
               setCategory(event.target.value as Expense["category"])
             }
           >
-            {Object.entries(expenseLabels).map(([value, label]) => (
+            {manualExpenseLabels.map(([value, label]) => (
               <option value={value} key={value}>
                 {label}
               </option>
@@ -597,16 +605,23 @@ export function ExpensesSection() {
                     </td>
                     <td>{expense.authorUserId}</td>
                     <td>
-                      <button
-                        className="table-action danger"
-                        onClick={() =>
-                          window.confirm(
-                            "Удалить этот расход? Это действие нельзя отменить.",
-                          ) && remove(expense.id)
-                        }
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {expense.category === "traffic_fee" ? (
+                        <span className="table-action is-locked" title="Системный расчёт защищён от удаления" aria-label="Системный расчёт защищён от удаления">
+                          <LockKeyhole size={15} aria-hidden="true" />
+                        </span>
+                      ) : (
+                        <button
+                          className="table-action danger"
+                          aria-label={`Удалить расход: ${expense.description}`}
+                          onClick={() =>
+                            window.confirm(
+                              "Удалить этот расход? Это действие нельзя отменить.",
+                            ) && remove(expense.id)
+                          }
+                        >
+                          <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -755,7 +770,7 @@ export function FinanceSection() {
             </div>
           </header>
           <dl>
-            {Object.entries(expenseLabels).map(([key, label]) => {
+            {Object.entries(expenseLabels).filter(([key]) => key !== "traffic_fee").map(([key, label]) => {
               const amount = expenses
                 .filter((item) => item.category === key)
                 .reduce((sum, item) => sum + item.amount, 0);
@@ -817,6 +832,9 @@ export function AnalyticsSection() {
   const products = useAppStore((state) => state.products);
   const allOrders = useAppStore((state) => state.orders);
   const managers = useAppStore((state) => state.managers);
+  const trafficFees = useAppStore((state) => state.trafficFees);
+  const settleTrafficFees = useAppStore((state) => state.settleTrafficFees);
+  const loading = useAppStore((state) => state.loading);
   const [period, setPeriod] = useState<"30" | "7" | "today">("30");
   const cutoff = useMemo(() => {
     const date = new Date();
@@ -865,6 +883,19 @@ export function AnalyticsSection() {
     ...products.map((product) => product.views),
     1,
   );
+  const pendingTrafficFees = trafficFees.filter((fee) => !fee.settledAt);
+  const pendingTrafficAmount = pendingTrafficFees.reduce((sum, fee) => sum + fee.amount, 0);
+  const totalTrafficAmount = trafficFees.reduce((sum, fee) => sum + fee.amount, 0);
+  const settledTrafficAmount = totalTrafficAmount - pendingTrafficAmount;
+  const lastSettlement = trafficFees
+    .filter((fee) => fee.settledAt)
+    .sort((a, b) => new Date(b.settledAt!).getTime() - new Date(a.settledAt!).getTime())[0]?.settledAt;
+  const settleTraffic = () => {
+    if (pendingTrafficAmount <= 0) return;
+    if (window.confirm(
+      `Рассчитаться по Трафик системе на ${formatMoney(pendingTrafficAmount)}? Сумма обнулится здесь и будет сохранена отдельным расходом.`,
+    )) void settleTrafficFees("Расчёт из карточки аналитики");
+  };
   return (
     <div className="crm-page analytics-section">
       <CrmPageHeader
@@ -925,6 +956,39 @@ export function AnalyticsSection() {
           </div>
         </div>
       </div>
+      <section className="traffic-system-card" aria-labelledby="traffic-system-title">
+        <div className="traffic-system-card__signal" aria-hidden="true">
+          <RadioTower size={24} />
+        </div>
+        <div className="traffic-system-card__main">
+          <div className="traffic-system-card__eyebrow">
+            <span><LockKeyhole size={14} aria-hidden="true" /> Только управляющий</span>
+            <b>5% · ONLINE</b>
+          </div>
+          <h2 id="traffic-system-title">Трафик система</h2>
+          <p>Автоматическая доля с каждой проведённой онлайн-продажи. Офлайн-заказы не учитываются.</p>
+          <div className="traffic-system-card__amount" aria-live="polite">
+            <small>К расчёту сейчас</small>
+            <strong>{formatMoney(pendingTrafficAmount)}</strong>
+            <span>{pendingTrafficFees.length} {pendingTrafficFees.length === 1 ? "продажа" : "продаж"}</span>
+          </div>
+        </div>
+        <div className="traffic-system-card__side">
+          <dl>
+            <div><dt>Начислено всего</dt><dd>{formatMoney(totalTrafficAmount)}</dd></div>
+            <div><dt>Уже рассчитано</dt><dd>{formatMoney(settledTrafficAmount)}</dd></div>
+            <div><dt>Последний расчёт</dt><dd>{lastSettlement ? formatDateTime(lastSettlement) : "Ещё не было"}</dd></div>
+          </dl>
+          <Button
+            icon={<CheckCheck size={17} aria-hidden="true" />}
+            onClick={settleTraffic}
+            disabled={loading || pendingTrafficAmount <= 0}
+          >
+            {pendingTrafficAmount > 0 ? "Рассчитаться" : "Всё рассчитано"}
+          </Button>
+          <small>Сумма сохраняется в расходах, но не смешивается с общей аналитикой и дашбордом.</small>
+        </div>
+      </section>
       <div className="dashboard-main-grid">
         <section className="crm-panel">
           <header>
@@ -1063,7 +1127,8 @@ export function NotificationsSection({ role }: { role: "admin" | "manager" }) {
   const session = useAppStore((state) => state.session)!;
   const all = useAppStore((state) => state.notifications);
   const mark = useAppStore((state) => state.markNotificationRead);
-  const clear = useAppStore((state) => state.clearNotifications);
+  const markAll = useAppStore((state) => state.markAllNotificationsRead);
+  const loading = useAppStore((state) => state.loading);
   const [filter, setFilter] = useState("all");
   const scoped = all
     .filter((item) => !item.userId || item.userId === session.id)
@@ -1072,10 +1137,9 @@ export function NotificationsSection({ role }: { role: "admin" | "manager" }) {
         filter === "all" ||
         (filter === "unread" ? !item.isRead : item.type === filter),
     );
-  const clearAll = () => {
-    if (window.confirm("Вы уверены, что хотите очистить историю уведомлений?"))
-      void clear(session.id);
-  };
+  const unreadCount = all.filter(
+    (item) => (!item.userId || item.userId === session.id) && !item.isRead,
+  ).length;
   return (
     <div className="crm-page notifications-section">
       <CrmPageHeader
@@ -1084,10 +1148,11 @@ export function NotificationsSection({ role }: { role: "admin" | "manager" }) {
         actions={
           <Button
             variant="ghost"
-            icon={<Trash2 size={17} />}
-            onClick={clearAll}
+            icon={<CheckCheck size={17} aria-hidden="true" />}
+            onClick={() => void markAll()}
+            disabled={loading || unreadCount === 0}
           >
-            Очистить историю
+            {unreadCount > 0 ? `Прочитать всё · ${unreadCount}` : "Всё прочитано"}
           </Button>
         }
       />

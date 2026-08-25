@@ -104,7 +104,8 @@ interface AppState extends SupabaseSnapshot {
   updateFaq: (faqId: string, changes: Partial<FAQ>) => Promise<void>;
   deleteFaq: (faqId: string) => Promise<void>;
   markNotificationRead: (notificationId: string) => Promise<void>;
-  clearNotifications: (userId?: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  settleTrafficFees: (note?: string) => Promise<void>;
   saveSettings: (changes: Partial<AppSettings>) => Promise<void>;
   addAILog: (log: AIImportLog) => Promise<void>;
   updateProfile: (name: string, phone: string) => Promise<void>;
@@ -122,7 +123,7 @@ const settings = defaultSettings();
 const emptyData: SupabaseSnapshot = {
   products: [], categories: [], brands: [], leads: [], orders: [], managers: [],
   customers: [], suppliers: [], supplierDeliveries: [], supplierDebts: [], supplierPayments: [],
-  managerCommissions: [], managerPayouts: [], expenses: [], returns: [],
+  managerCommissions: [], managerPayouts: [], trafficFees: [], expenses: [], returns: [],
   movements: [], notifications: [], faqs: [], analytics: [], aiLogs: [],
   auditLogs: [], settings,
 };
@@ -289,7 +290,7 @@ export const useAppStore = create<AppState>((set, get) => {
     deleteProduct: (productId) => mutate(() => supabaseGateway.deleteProduct(productId), "Товар удалён"),
     adjustStock: (productId, delta, reason) => mutate(() => supabaseGateway.adjustStock(productId, delta, reason), "Остаток обновлён"),
     addManager: (input) => mutate(() => supabaseGateway.inviteManager(input.email, input.name, input.phone), "Приглашение отправлено на email"),
-    deleteManager: (managerId) => mutate(() => supabaseGateway.archiveManager(managerId), "Менеджер отключён"),
+    deleteManager: (managerId) => mutate(() => supabaseGateway.deleteManager(managerId), "Менеджер удалён"),
     addSupplier: (input, items) => mutate(() => supabaseGateway.addSupplier(input, items), "Поставщик и первая поставка добавлены", true),
     addSupplierDelivery: (supplierId, items, notes) => mutate(() => supabaseGateway.addSupplierDelivery(supplierId, items, notes), "Поставка добавлена", true),
     deleteSupplier: (supplierId) => mutate(() => supabaseGateway.archiveSupplier(supplierId), "Поставщик удалён", true),
@@ -311,7 +312,8 @@ export const useAppStore = create<AppState>((set, get) => {
     },
     deleteFaq: (faqId) => mutate(() => supabaseGateway.deleteFaq(faqId), "FAQ удалён"),
     markNotificationRead: (notificationId) => mutate(() => supabaseGateway.markNotificationRead(notificationId)),
-    clearNotifications: (userId) => mutate(() => supabaseGateway.clearNotifications(userId)),
+    markAllNotificationsRead: () => mutate(() => supabaseGateway.markAllNotificationsRead(), "Все уведомления прочитаны"),
+    settleTrafficFees: (note) => mutate(() => supabaseGateway.settleTrafficFees(note), "Расчёт сохранён в расходах"),
     saveSettings: (changes) => {
       const nextSettings = { ...get().settings, ...changes };
       return mutate(() => supabaseGateway.saveSettings(nextSettings), "Настройки сохранены");

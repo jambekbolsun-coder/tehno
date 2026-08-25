@@ -312,6 +312,7 @@ export interface InstallmentPlan extends Entity {
 
 export interface ManagerCommission extends Entity {
   managerId: ID;
+  managerNameSnapshot?: string;
   orderId: ID;
   amount: Money;
   status: "accrued" | "paid" | "cancelled";
@@ -319,6 +320,7 @@ export interface ManagerCommission extends Entity {
 
 export interface ManagerPayout extends Entity {
   managerId: ID;
+  managerNameSnapshot?: string;
   amount: Money;
   comment: string;
   paidByUserId: ID;
@@ -351,7 +353,20 @@ export type ExpenseCategory =
   | "equipment"
   | "repair"
   | "tax"
+  | "traffic_fee"
   | "other";
+
+export interface TrafficFee extends Entity {
+  orderId: ID;
+  rateBasisPoints: number;
+  saleTotal: Money;
+  amount: Money;
+  accruedAt: string;
+  settledAt?: string;
+  settledByUserId?: ID;
+  settlementBatchId?: ID;
+  settlementExpenseId?: ID;
+}
 
 export interface Expense extends Entity {
   category: ExpenseCategory;

@@ -69,6 +69,73 @@ test("на мобильной карточке видны корзина и По
   expect(cartColor).not.toBe("rgba(0, 0, 0, 0)");
 });
 
+test("TEHNO CHOICE листается жестом и сохраняет кнопки-альтернативы", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#/");
+  const rail = page.getByRole("region", { name: /товары TEHNO CHOICE/i });
+  await expect(rail).toBeVisible();
+  const cards = rail.locator(".product-card");
+  test.skip((await cards.count()) < 2, "Для проверки жеста нужно минимум два товара");
+  await rail.scrollIntoViewIfNeeded();
+  const box = await rail.boundingBox();
+  expect(box).not.toBeNull();
+  const before = await rail.evaluate((element) => element.scrollLeft);
+  const cdp = await page.context().newCDPSession(page);
+  const start = { x: box!.x + box!.width - 35, y: box!.y + box!.height / 2 };
+  const end = { x: box!.x + 45, y: start.y };
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [start] });
+  for (let step = 1; step <= 8; step += 1) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{
+        x: start.x + ((end.x - start.x) * step) / 8,
+        y: start.y,
+      }],
+    });
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  const after = await rail.evaluate((element) => element.scrollLeft);
+  expect(after).toBeGreaterThan(before + 80);
+  await expect(page).toHaveURL(/#\/$/);
+
+  for (const name of ["Листать товары назад", "Листать товары вперёд"]) {
+    const button = page.getByRole("button", { name });
+    await expect(button).toBeVisible();
+    const size = await button.evaluate((element) => ({
+      width: element.getBoundingClientRect().width,
+      height: element.getBoundingClientRect().height,
+    }));
+    expect(size.width).toBeGreaterThanOrEqual(44);
+    expect(size.height).toBeGreaterThanOrEqual(44);
+  }
+});
+
+test("тексты мобильной карточки имеют читаемые интервалы и крупные действия", async ({ page }, testInfo) => {
+  test.skip(!testInfo.project.name.includes("mobile"), "Проверка предназначена для мобильного проекта");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/#/");
+  const card = page.locator(".market-catalog-preview .product-card").first();
+  await expect(card).toBeVisible();
+  const layout = await card.evaluate((element) => {
+    const rect = (selector: string) => element.querySelector(selector)!.getBoundingClientRect();
+    const title = rect(".product-card__title");
+    const model = rect(".product-card__model");
+    const price = rect(".product-card__price-row");
+    return {
+      titleToModel: model.top - title.bottom,
+      modelToPrice: price.top - model.bottom,
+      actionHeights: [...element.querySelectorAll<HTMLElement>(".product-card__footer button, .product-card__footer a")]
+        .map((action) => action.getBoundingClientRect().height),
+      favoriteHeight: element.querySelector(".favorite-button")!.getBoundingClientRect().height,
+    };
+  });
+  expect(layout.titleToModel).toBeGreaterThanOrEqual(4);
+  expect(layout.modelToPrice).toBeGreaterThanOrEqual(5);
+  expect(layout.actionHeights.every((height) => height >= 44)).toBe(true);
+  expect(layout.favoriteHeight).toBeGreaterThanOrEqual(44);
+});
+
 test("корзина не ограничивает количество текущим складским остатком", async ({ page }) => {
   await page.goto("/#/");
   const cards = await waitForProducts(page);
