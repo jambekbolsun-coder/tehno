@@ -80,4 +80,66 @@ describe("SupabaseGateway supplier product flow", () => {
       }),
     );
   });
+
+  it("не удаляет и не загружает повторно неизменённые фотографии", async () => {
+    const deleteImages = vi.fn();
+    const upsertImages = vi.fn().mockResolvedValue({ error: null });
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "brands") return {
+        select: () => ({
+          ilike: () => ({
+            limit: () => ({ maybeSingle: vi.fn().mockResolvedValue({ data: { id: "brand-test" }, error: null }) }),
+          }),
+        }),
+      };
+      if (table === "products") return {
+        upsert: () => ({
+          select: () => ({ single: vi.fn().mockResolvedValue({ data: { id: product.id }, error: null }) }),
+        }),
+      };
+      if (table === "supplier_products") return {
+        upsert: vi.fn().mockResolvedValue({ error: null }),
+      };
+      if (table === "product_images") return {
+        select: () => ({
+          eq: () => ({
+            order: vi.fn().mockResolvedValue({
+              data: [{
+                id: "image-existing",
+                product_id: product.id,
+                public_url: "https://cdn.example/product.webp",
+                storage_path: `${product.id}/image-existing.webp`,
+                alt_ru: "Товар",
+                alt_kg: "Товар",
+                alt_en: "Product",
+                sort_order: 0,
+                is_primary: true,
+                created_at: product.createdAt,
+              }],
+              error: null,
+            }),
+          }),
+        }),
+        delete: deleteImages,
+        upsert: upsertImages,
+      };
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const saved = await supabaseGateway.saveProduct({
+      ...product,
+      images: [{
+        id: "image-existing",
+        url: "https://cdn.example/product.webp",
+        position: 0,
+        alt: { ru: "Товар", kg: "Товар", en: "Product" },
+      }],
+    });
+
+    expect(deleteImages).not.toHaveBeenCalled();
+    expect(upsertImages).not.toHaveBeenCalled();
+    expect(saved.images).toEqual([
+      expect.objectContaining({ id: "image-existing", url: "https://cdn.example/product.webp" }),
+    ]);
+  });
 });

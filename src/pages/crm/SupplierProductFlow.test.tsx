@@ -204,6 +204,31 @@ describe("supplier → delivery → product UI flow", () => {
     );
   });
 
+  it("сразу подтверждает клик по сохранению и не отправляет товар повторно", async () => {
+    const user = userEvent.setup();
+    let finishSave!: () => void;
+    const saveProduct = vi.fn(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+    useAppStore.setState({
+      suppliers: [supplier],
+      supplierDeliveries: [delivery],
+      saveProduct,
+    });
+    render(<CatalogSection role="admin" />);
+
+    await user.click(screen.getByRole("button", { name: "Добавить товар" }));
+    await user.type(screen.getByLabelText("Цена продажи, сом *"), "35000");
+    await user.click(screen.getByRole("button", { name: "Сохранить товар" }));
+
+    const savingButton = await screen.findByRole("button", { name: "Сохраняем товар…" });
+    expect(savingButton).toBeDisabled();
+    expect(savingButton.closest("form")).toHaveAttribute("aria-busy", "true");
+    await user.click(savingButton);
+    expect(saveProduct).toHaveBeenCalledTimes(1);
+
+    finishSave();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
   it("ищет поставщика и модель по части названия", async () => {
     const user = userEvent.setup();
     useAppStore.setState({

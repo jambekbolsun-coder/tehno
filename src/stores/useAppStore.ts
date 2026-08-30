@@ -129,6 +129,7 @@ const emptyData: SupabaseSnapshot = {
 };
 
 export const useAppStore = create<AppState>((set, get) => {
+  let productSaveInFlight = false;
   const toast = (message: string, kind: ToastKind = "success") =>
     set({ toast: { id: createId("toast"), kind, message } });
 
@@ -153,6 +154,13 @@ export const useAppStore = create<AppState>((set, get) => {
     } finally {
       set({ loading: false });
     }
+  };
+
+  const refreshFromRealtime = (tables: string[]) => {
+    // saveProduct updates the catalogue locally. Ignore only its own products echo;
+    // changes to leads, orders and notifications must never be dropped.
+    if (productSaveInFlight && tables.every((table) => table === "products")) return;
+    void get().refresh();
   };
 
   return {
@@ -180,7 +188,7 @@ export const useAppStore = create<AppState>((set, get) => {
         const data = await supabaseGateway.load(session);
         set({ ...data, session, ready: true, loading: false, backendError: sessionError });
         stopRealtime?.();
-        stopRealtime = session ? supabaseGateway.subscribe(() => void get().refresh()) : undefined;
+        stopRealtime = session ? supabaseGateway.subscribe(refreshFromRealtime) : undefined;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Supabase недоступен";
         set({ ready: true, loading: false, backendError: message });
@@ -208,7 +216,7 @@ export const useAppStore = create<AppState>((set, get) => {
         const data = await supabaseGateway.load(session);
         set({ ...data, session });
         stopRealtime?.();
-        stopRealtime = supabaseGateway.subscribe(() => void get().refresh());
+        stopRealtime = supabaseGateway.subscribe(refreshFromRealtime);
         return session;
       } finally {
         set({ loading: false });
@@ -280,8 +288,35 @@ export const useAppStore = create<AppState>((set, get) => {
     reassignLead: (leadId, managerId) => mutate(() => supabaseGateway.reassignLead(leadId, managerId), "Заявка переназначена"),
     changeLeadStatus: (leadId, status, comment) => mutate(() => supabaseGateway.changeLeadStatus(leadId, status, comment)),
     saveProduct: async (product, deliveryItemId) => {
-      if (product.images.length > 5) return toast("Можно добавить максимум пять фотографий", "error");
-      await mutate(() => supabaseGateway.saveProduct(product, deliveryItemId), "Товар сохранён", true);
+      if (product.images.length > 5) {
+        toast("Можно добавить максимум пять фотографий", "error");
+        throw new Error("Можно добавить максимум пять фотографий");
+      }
+      set({ loading: true });
+      productSaveInFlight = true;
+      try {
+        const savedProduct = await supabaseGateway.saveProduct(product, deliveryItemId);
+        set((state) => ({
+          products: state.products.some((item) => item.id === savedProduct.id)
+            ? state.products.map((item) => item.id === savedProduct.id ? savedProduct : item)
+            : [savedProduct, ...state.products],
+          supplierDeliveries: deliveryItemId
+            ? state.supplierDeliveries.map((delivery) => ({
+                ...delivery,
+                items: delivery.items.map((item) => item.id === deliveryItemId
+                  ? { ...item, productId: savedProduct.id, updatedAt: savedProduct.updatedAt }
+                  : item),
+              }))
+            : state.supplierDeliveries,
+        }));
+        toast("Товар сохранён");
+      } catch (error) {
+        toast(error instanceof Error ? error.message : "Не удалось сохранить товар", "error");
+        throw error;
+      } finally {
+        productSaveInFlight = false;
+        set({ loading: false });
+      }
     },
     archiveProduct: (productId) => {
       const product = get().products.find((item) => item.id === productId);
@@ -356,7 +391,7 @@ export const useAppStore = create<AppState>((set, get) => {
         const data = await supabaseGateway.load(session);
         set({ ...data, session });
         stopRealtime?.();
-        stopRealtime = supabaseGateway.subscribe(() => void get().refresh());
+        stopRealtime = supabaseGateway.subscribe(refreshFromRealtime);
         return session;
       } finally {
         set({ loading: false });

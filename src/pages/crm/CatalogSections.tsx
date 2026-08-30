@@ -1,4 +1,4 @@
-import { Archive, Boxes, CircleDollarSign, Edit3, Eye, EyeOff, Filter, ImagePlus, MinusCircle, PackageCheck, PackagePlus, Plus, RotateCcw, Search, ShoppingCart, Trash2, TriangleAlert } from "lucide-react";
+import { Archive, Boxes, CircleDollarSign, Edit3, Eye, EyeOff, Filter, ImagePlus, LoaderCircle, MinusCircle, PackageCheck, PackagePlus, Plus, RotateCcw, Search, ShoppingCart, Trash2, TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -46,6 +46,7 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
     product ? structuredClone(product) : emptyProduct(categories[0]?.id, firstItem?.supplierId ?? ""),
   );
   const [imageUrls, setImageUrls] = useState((product?.images ?? []).map((item) => item.url).join("\n"));
+  const [saving, setSaving] = useState(false);
   const isNew = !product;
   const supplierItems = unlinkedItems.filter((item) => item.supplierId === supplierId);
   const availableSuppliers = suppliers.filter((supplier) => supplier.isActive && unlinkedItems.some((item) => item.supplierId === supplier.id));
@@ -105,6 +106,7 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
     setDraft((current) => ({ ...current, [field]: value ? toMinor(Number(value)) : undefined }));
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (saving) return;
     const urls = imageUrls.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
     if (urls.length > 5) return showToast("Можно добавить максимум пять фотографий", "error");
     if (isNew && !deliveryItemId) return showToast("Сначала выберите поставщика и модель из поставки", "error");
@@ -126,17 +128,20 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
       })),
       updatedAt: nowIso(),
     };
+    setSaving(true);
     try {
       await save(next, isNew ? deliveryItemId : undefined);
       onClose();
     } catch {
       // Ошибка уже показана единым уведомлением в хранилище.
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={product ? `Редактирование: ${product.name.ru}` : "Новый товар из поставки"} size="lg" className="product-editor-modal">
-      <form className="crm-form product-editor" onSubmit={submit}>
+    <Modal open={open} onClose={() => { if (!saving) onClose(); }} title={product ? `Редактирование: ${product.name.ru}` : "Новый товар из поставки"} size="lg" className="product-editor-modal">
+      <form className="crm-form product-editor" onSubmit={submit} aria-busy={saving}>
         {isNew && (
           <section className="product-source-panel">
             <header>
@@ -209,7 +214,7 @@ function ProductEditor({ product, open, onClose }: { product: Product | null; op
           <div className="field field--wide"><label htmlFor="product-images"><ImagePlus size={16}/>Фотографии (макс. 5)</label><input id="product-images" type="file" accept="image/*" multiple onChange={(event) => addImageFiles(event.target.files)}/><textarea aria-label="Внешние URL фотографий" rows={4} value={imageUrls} onChange={(event) => setImageUrls(event.target.value)} placeholder="Также можно вставить внешние URL, каждый с новой строки"/><small>{imageUrls.split(/\r?\n/).filter((value) => value.trim()).length}/5 изображений · файлы загружаются в Supabase Storage</small></div>
         </div>
         <div className="form-check-grid"><label><input type="checkbox" checked={draft.isVisible} onChange={(event) => setDraft((current) => ({ ...current, isVisible: event.target.checked }))}/>Показывать на сайте</label><label><input type="checkbox" checked={draft.isFeatured} onChange={(event) => setDraft((current) => ({ ...current, isFeatured: event.target.checked }))}/>Добавить в рекомендации</label><label><input type="checkbox" checked={draft.installmentEligible} onChange={(event) => setDraft((current) => ({ ...current, installmentEligible: event.target.checked }))}/>Доступна рассрочка</label></div>
-        <footer className="modal-form-actions"><Button type="button" variant="ghost" onClick={onClose}>Отмена</Button><Button type="submit" disabled={isNew && !deliveryItemId}>Сохранить товар</Button></footer>
+        <footer className="modal-form-actions product-editor__actions"><Button type="button" variant="ghost" onClick={onClose} disabled={saving}>Отмена</Button><Button type="submit" icon={saving ? <LoaderCircle className="button-spinner" size={17}/> : undefined} disabled={saving || (isNew && !deliveryItemId)}>{saving ? "Сохраняем товар…" : "Сохранить товар"}</Button></footer>
       </form>
     </Modal>
   );

@@ -969,7 +969,7 @@ class SupabaseGateway {
     });
   }
 
-  async saveProduct(product: Product, deliveryItemId?: string): Promise<void> {
+  async saveProduct(product: Product, deliveryItemId?: string): Promise<Product> {
     let brandId: string | null = null;
     const brandName = product.brand.trim();
     if (brandName && !deliveryItemId) {
@@ -1058,38 +1058,101 @@ class SupabaseGateway {
       }, { onConflict: "supplier_id,product_id" });
       if (relation.error) throw new Error(relation.error.message);
     }
-    const removed = await supabase.from("product_images").delete().eq("product_id", productId);
-    if (removed.error) throw new Error(removed.error.message);
-    if (product.images.length) {
-      const preparedImages = await Promise.all(product.images.slice(0, 5).map(async (image, index) => {
-        if (!image.url.startsWith("data:")) {
-          return { ...image, storagePath: `external/${productId}/${index + 1}` };
-        }
-        const blob = await fetch(image.url).then((response) => response.blob());
-        const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "webp";
-        const storagePath = `${productId}/${crypto.randomUUID()}.${extension}`;
-        const uploaded = await supabase.storage.from("product-images").upload(storagePath, blob, {
-          contentType: blob.type,
-          cacheControl: "31536000",
-        });
-        if (uploaded.error) throw new Error(uploaded.error.message);
-        const { data } = supabase.storage.from("product-images").getPublicUrl(storagePath);
-        return { ...image, url: data.publicUrl, storagePath };
-      }));
-      const inserted = await supabase.from("product_images").insert(
-        preparedImages.map((image, index) => ({
+    const existingImages: ProductImageRow[] = [];
+    if (!deliveryItemId) {
+      const currentImages = await supabase
+        .from("product_images")
+        .select("*")
+        .eq("product_id", productId)
+        .order("sort_order");
+      if (currentImages.error) throw new Error(currentImages.error.message);
+      existingImages.push(...currentImages.data);
+    }
+
+    const existingByUrl = new Map(
+      existingImages
+        .filter((image) => image.public_url)
+        .map((image) => [image.public_url!, image]),
+    );
+    const preparedImages = await Promise.all(product.images.slice(0, 5).map(async (image, index) => {
+      const existing = !image.url.startsWith("data:") ? existingByUrl.get(image.url) : undefined;
+      if (existing) {
+        return {
+          id: existing.id,
+          url: existing.public_url || image.url,
+          alt: image.alt,
+          position: index,
+          storagePath: existing.storage_path,
+        };
+      }
+
+      const imageId = crypto.randomUUID();
+      if (!image.url.startsWith("data:")) {
+        return {
+          id: imageId,
+          url: image.url,
+          alt: image.alt,
+          position: index,
+          storagePath: `external/${productId}/${imageId}`,
+        };
+      }
+
+      const blob = await fetch(image.url).then((response) => response.blob());
+      const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "webp";
+      const storagePath = `${productId}/${imageId}.${extension}`;
+      const uploaded = await supabase.storage.from("product-images").upload(storagePath, blob, {
+        contentType: blob.type,
+        cacheControl: "31536000",
+      });
+      if (uploaded.error) throw new Error(uploaded.error.message);
+      const { data } = supabase.storage.from("product-images").getPublicUrl(storagePath);
+      return { id: imageId, url: data.publicUrl, alt: image.alt, position: index, storagePath };
+    }));
+
+    const retainedIds = new Set(preparedImages.map((image) => image.id));
+    const removedIds = existingImages
+      .filter((image) => !retainedIds.has(image.id))
+      .map((image) => image.id);
+    if (removedIds.length) {
+      const removed = await supabase.from("product_images").delete().in("id", removedIds);
+      if (removed.error) throw new Error(removed.error.message);
+    }
+    const existingById = new Map(existingImages.map((image) => [image.id, image]));
+    const changedImages = preparedImages.filter((image, index) => {
+      const existing = existingById.get(image.id);
+      return !existing ||
+        existing.storage_path !== image.storagePath ||
+        existing.public_url !== image.url ||
+        existing.alt_ru !== image.alt.ru ||
+        existing.alt_kg !== image.alt.kg ||
+        existing.alt_en !== image.alt.en ||
+        existing.sort_order !== index ||
+        existing.is_primary !== (index === 0);
+    });
+    if (changedImages.length) {
+      const savedImages = await supabase.from("product_images").upsert(
+        changedImages.map((image) => ({
+          id: image.id,
           product_id: productId,
           storage_path: image.storagePath,
           public_url: image.url,
           alt_ru: image.alt.ru,
           alt_kg: image.alt.kg,
           alt_en: image.alt.en,
-          sort_order: index,
-          is_primary: index === 0,
+          sort_order: image.position,
+          is_primary: image.position === 0,
         })),
+        { onConflict: "id" },
       );
-      if (inserted.error) throw new Error(inserted.error.message);
+      if (savedImages.error) throw new Error(savedImages.error.message);
     }
+
+    return {
+      ...product,
+      id: productId,
+      images: preparedImages.map(({ storagePath: _storagePath, ...image }) => image),
+      updatedAt: nowIso(),
+    };
   }
 
   async archiveProduct(productId: string, archived: boolean) {
@@ -1450,18 +1513,24 @@ class SupabaseGateway {
     return { number: `ORD-${result.order_number}` };
   }
 
-  subscribe(onChange: () => void) {
+  subscribe(onChange: (tables: string[]) => void) {
     let timer = 0;
-    const refresh = () => {
+    const pendingTables = new Set<string>();
+    const refresh = (table: string) => {
+      pendingTables.add(table);
       window.clearTimeout(timer);
-      timer = window.setTimeout(onChange, 250);
+      timer = window.setTimeout(() => {
+        const tables = [...pendingTables];
+        pendingTables.clear();
+        onChange(tables);
+      }, 250);
     };
     const channel = supabase
       .channel("tehno-center-crm")
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, refresh)
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => refresh("products"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, () => refresh("leads"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => refresh("orders"))
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => refresh("notifications"))
       .subscribe();
     return () => {
       window.clearTimeout(timer);
