@@ -23,15 +23,38 @@
 .public-app .site-header--service-ui .desktop-news-link:hover,
 .public-app .site-header--service-ui .desktop-news-link.active { border-color: color-mix(in srgb, var(--store-primary) 55%, var(--store-line)); background: var(--store-primary-soft); color: var(--store-primary-strong); }
 
-.public-app .social-fabs { position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 58; display: flex; align-items: center; gap: 10px; }
+.public-app .social-fabs {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 58;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 10px;
+}
 .public-app .social-fabs .whatsapp-fab,
 .public-app .social-fabs .instagram-fab {
   position: static !important; inset: auto !important; min-height: 50px; display: inline-flex !important; align-items: center; justify-content: center; gap: 8px; padding: 0 17px;
   border: 0; border-radius: 999px; color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.2); font-weight: 800; text-decoration: none;
+  transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease, background-position 320ms ease;
+  will-change: transform;
 }
 .public-app .social-fabs .whatsapp-fab { background: #25d366; }
-.public-app .social-fabs .instagram-fab { background: radial-gradient(circle at 32% 106%, #ffd600 0 24%, #ff7a00 25% 38%, #ff0169 49% 64%, #d300c5 75% 84%, #7638fa 100%); }
+.public-app .social-fabs .instagram-fab {
+  background: radial-gradient(circle at 32% 106%, #ffd600 0 24%, #ff7a00 25% 38%, #ff0169 49% 64%, #d300c5 75% 84%, #7638fa 100%);
+  background-size: 135% 135%;
+  background-position: 50% 50%;
+}
 .public-app .social-fabs a:hover { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(0,0,0,.25); }
+.public-app .social-fabs .instagram-fab:hover {
+  transform: translateY(-5px) scale(1.045);
+  box-shadow: 0 18px 38px rgba(211,0,197,.3), 0 10px 24px rgba(255,1,105,.24);
+  filter: saturate(1.08) brightness(1.03);
+  background-position: 42% 42%;
+}
+.public-app .social-fabs .instagram-fab svg { transition: transform 220ms ease; }
+.public-app .social-fabs .instagram-fab:hover svg { transform: rotate(-8deg) scale(1.08); }
 
 .public-news-page { padding-bottom: 72px; }
 .public-news-hero { max-width: 780px; padding: 24px 0 34px; }
