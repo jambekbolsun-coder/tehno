@@ -11,5 +11,6 @@ import "@/styles/mbank-refresh.css";
 import "@/styles/market-v2.css";
 import "@/styles/market-v2-fixes.css";
 import "@/styles/storefront-polish.css";
+import "@/styles/site-content.css";
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App/></StrictMode>);

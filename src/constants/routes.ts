@@ -1,45 +1,5 @@
 export const ADMIN_SECTIONS = [
-  ["dashboard", "Главная панель"],
-  ["ai", "ИИ-помощник"],
-  ["leads", "Заявки"],
-  ["funnel", "Воронка"],
-  ["catalog", "Каталог"],
-  ["inventory", "Склад"],
-  ["online-sales", "Онлайн-продажи"],
-  ["offline-sales", "Офлайн-продажи"],
-  ["managers", "Менеджеры"],
-  ["customers", "Клиенты"],
-  ["suppliers", "Поставщики"],
-  ["returns", "Возвраты и брак"],
-  ["expenses", "Расходы"],
-  ["finance", "Финансы"],
-  ["analytics", "Аналитика"],
-  ["notifications", "Уведомления"],
-  ["faq", "FAQ"],
-  ["settings", "Настройки"],
-  ["profile", "Профиль"],
+  ["dashboard", "Главная панель"], ["ai", "ИИ-помощник"], ["leads", "Заявки"], ["funnel", "Воронка"], ["catalog", "Каталог"], ["content", "Контент сайта"], ["inventory", "Склад"], ["online-sales", "Онлайн-продажи"], ["offline-sales", "Офлайн-продажи"], ["managers", "Менеджеры"], ["customers", "Клиенты"], ["suppliers", "Поставщики"], ["returns", "Возвраты и брак"], ["expenses", "Расходы"], ["finance", "Финансы"], ["analytics", "Аналитика"], ["notifications", "Уведомления"], ["faq", "FAQ"], ["settings", "Настройки"], ["profile", "Профиль"],
 ] as const;
-
-export const MANAGER_SECTIONS = [
-  ["dashboard", "Dashboard"],
-  ["leads", "Мои заявки"],
-  ["funnel", "Воронка"],
-  ["catalog", "Каталог"],
-  ["customers", "Мои клиенты"],
-  ["sales", "Мои продажи"],
-  ["earnings", "Мои начисления"],
-  ["notifications", "Уведомления"],
-  ["ai", "ИИ-помощник"],
-  ["profile", "Профиль"],
-] as const;
-
-export const LEAD_STATUSES = [
-  "new",
-  "working",
-  "confirmed",
-  "courier_picked_up",
-  "courier_in_transit",
-  "completed",
-  "refused",
-  "cancelled",
-] as const;
+export const MANAGER_SECTIONS = [["dashboard", "Dashboard"], ["leads", "Мои заявки"], ["funnel", "Воронка"], ["catalog", "Каталог"], ["customers", "Мои клиенты"], ["sales", "Мои продажи"], ["earnings", "Мои начисления"], ["notifications", "Уведомления"], ["ai", "ИИ-помощник"], ["profile", "Профиль"]] as const;
+export const LEAD_STATUSES = ["new", "working", "confirmed", "courier_picked_up", "courier_in_transit", "completed", "refused", "cancelled"] as const;
